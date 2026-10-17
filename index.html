@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>El Fuanza · En vivo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14101f; --panel:#1e1830; --line:#2f2747; --text:#f1ecff; --muted:#a79fc4;
+  --accent:#9b6bff; --live:#ff4d6d; --ok:#f7931e;
+  --radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#f5f2fc; --panel:#ffffff; --line:#ddd5f0; --text:#1d1530; --muted:#6b6385; }
+}
+*{box-sizing:border-box;margin:0}
+html,body{min-height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Figtree',system-ui,sans-serif; line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+header{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px clamp(14px,3vw,32px); border-bottom:1px solid var(--line);
+}
+.brand{font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:1.4rem; letter-spacing:-.02em}
+.brand span{color:var(--accent)}
+.follow{
+  background:var(--accent); color:#fff; text-decoration:none; font-weight:600;
+  padding:8px 16px; border-radius:999px; font-size:.92rem;
+}
+.follow:focus-visible,.tab:focus-visible{outline:3px solid var(--text); outline-offset:2px}
+main{
+  display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px;
+  padding:16px clamp(14px,3vw,32px) 32px; max-width:1500px; margin:auto;
+}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.tabs{display:flex; gap:8px; flex-wrap:wrap}
+.tab{
+  border:1px solid var(--line); background:var(--panel); color:var(--text);
+  padding:8px 16px; border-radius:999px; font:inherit; font-weight:500; cursor:pointer;
+  display:flex; align-items:center; gap:8px;
+}
+.tab .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.tab[aria-selected="true"]{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
+.tab[aria-selected="true"] .dot{background:var(--live)}
+.player{
+  position:relative; aspect-ratio:16/9; background:#000;
+  border-radius:var(--radius); overflow:hidden; border:1px solid var(--line);
+}
+.player iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+.empty{
+  position:absolute; inset:0; display:grid; place-items:center; text-align:center;
+  padding:24px; color:#cfc8e6; background:#0d0a16;
+}
+.empty code{background:#241d38; padding:2px 6px; border-radius:6px; color:#fff}
+.title h1{font-family:'Bricolage Grotesque',sans-serif; font-size:clamp(1.3rem,2.6vw,1.9rem); letter-spacing:-.02em; line-height:1.15}
+.title p{color:var(--muted); margin-top:4px}
+.chat{
+  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  background:var(--panel); min-height:480px; height:calc(100vh - 110px); max-height:820px;
+  position:sticky; top:16px;
+}
+.chat iframe{width:100%; height:100%; border:0}
+footer{text-align:center; color:var(--muted); font-size:.85rem; padding:0 16px 24px}
+@media (max-width:960px){
+  main{grid-template-columns:1fr}
+  .chat{position:static; height:520px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">El <span>Fuanza</span></div>
+  <a class="follow" id="twitchLink" target="_blank" rel="noopener">Seguir en Twitch</a>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="tabs" role="tablist" aria-label="Servidores"></div>
+    <div class="player" id="player"></div>
+    <div class="title">
+      <h1 id="streamTitle"></h1>
+      <p>Si un servidor falla, prueba con otro.</p>
+    </div>
+  </section>
+
+  <aside class="chat" aria-label="Chat de Twitch">
+    <iframe id="chat" title="Chat de Twitch"></iframe>
+  </aside>
+</main>
+
+<footer>Transmisión de <span id="footerName"></span></footer>
+
+<script>
+/* ============ CONFIGURACIÓN: edita solo esta parte ============ */
+const CONFIG = {
+  twitchChannel: "fernandororonoa",
+  title: "En vivo con Fernando",
+  // Pega aquí el ID del video/transmisión de ok.ru
+  // Ejemplo: https://ok.ru/video/1234567890  →  "1234567890"
+  okruVideoId: ""
+};
+/* =============================================================== */
+
+const host = location.hostname || "localhost";
+
+const servers = [
+  {
+    name: "Twitch",
+    src: `https://player.twitch.tv/?channel=${CONFIG.twitchChannel}&parent=${host}&autoplay=true&muted=false`
+  },
+  {
+    name: "OK.ru",
+    src: CONFIG.okruVideoId ? `https://ok.ru/videoembed/${CONFIG.okruVideoId}` : null
+  }
+];
+
+const tabs = document.querySelector(".tabs");
+const player = document.getElementById("player");
+
+function show(i){
+  [...tabs.children].forEach((t,idx)=>t.setAttribute("aria-selected", idx===i));
+  const s = servers[i];
+  player.innerHTML = "";
+  if(!s.src){
+    player.innerHTML = `<div class="empty"><p>Este servidor aún no está configurado.<br>
+      Agrega el ID en <code>okruVideoId</code> dentro de <code>index.html</code>.</p></div>`;
+    return;
+  }
+  const f = document.createElement("iframe");
+  f.src = s.src;
+  f.title = "Servidor " + s.name;
+  f.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
+  f.allowFullscreen = true;
+  player.appendChild(f);
+}
+
+servers.forEach((s,i)=>{
+  const b = document.createElement("button");
+  b.className = "tab"; b.role = "tab";
+  b.innerHTML = `<span class="dot"></span>${s.name}`;
+  b.onclick = ()=>show(i);
+  tabs.appendChild(b);
+});
+
+document.getElementById("streamTitle").textContent = CONFIG.title;
+document.getElementById("footerName").textContent = CONFIG.twitchChannel;
+document.getElementById("twitchLink").href = `https://www.twitch.tv/${CONFIG.twitchChannel}`;
+document.getElementById("chat").src =
+  `https://www.twitch.tv/embed/${CONFIG.twitchChannel}/chat?parent=${host}&darkpopout`;
+
+show(0);
+</script>
+</body>
+</html>
