@@ -38,6 +38,19 @@ main.nochat{grid-template-columns:minmax(0,1fr)}
 .seg button[aria-pressed=true]{background:var(--accent);color:#fff}
 .seg button:not([aria-pressed=true]):hover{color:var(--text)}
 .seg button:disabled{opacity:.4;cursor:not-allowed}
+.profile{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);background:var(--panel2);flex:none}
+.pinfo{flex:1;min-width:160px}
+.pinfo h1{font-size:22px;line-height:1.2}
+.pinfo p{font-size:14px;color:var(--mute)}
+.socials{display:flex;gap:8px;flex-wrap:wrap}
+.soc{padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;border:0;transition:transform .12s,filter .12s}
+.soc:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.soc.twitch{background:#9146ff;color:#fff}
+.soc.kick{background:#53fc18;color:#0b0e0a}
+.soc.tiktok{background:#fe2c55;color:#fff}
+.soc.patreon{background:#ff424d;color:#fff;background:linear-gradient(135deg,#f96854,#ff424d)}
+.soc.discord{background:#5865f2;color:#fff}
 .qnote{font-size:12px;color:var(--mute)}
 aside{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:480px;height:calc(100vh - 80px);position:sticky;top:12px}
 main.nochat aside{display:none}
@@ -82,30 +95,34 @@ nav{margin-left:0;width:100%}
 
 <header>
   <a class="brand" href="/" aria-label="Fernandororonoa"><span class="logo">F</span>Fernandororonoa<span class="live" id="liveTag">Comprobando…</span></a>
-  <nav aria-label="Redes">
-    <a href="https://www.twitch.tv/fernandororonoa" target="_blank" rel="noopener">Twitch</a>
-    <a href="#" id="lnkTiktok" target="_blank" rel="noopener">TikTok</a>
-    <a href="#" id="lnkPatreon" class="patreon" target="_blank" rel="noopener">Patreon</a>
-    <a href="#" id="lnkDiscord" target="_blank" rel="noopener">Discord</a>
-  </nav>
+  
 </header>
 
 <main id="main">
   <section class="stage">
     <div class="player" id="player"><div id="tw"></div></div>
-    <div class="bar">
-      <h1>Directo de Fernandororonoa<small>Directos en Twitch. ¡Pasa por el chat y sigue el canal!</small></h1>
-      <div class="seg" role="group" aria-label="Fuente del stream" id="segS">
-        <button type="button" data-s="twitch" aria-pressed="true">Twitch</button>
-        <button type="button" data-s="okru" aria-pressed="false">OK.ru</button>
+    <div class="profile">
+      <img class="avatar" id="avatar" alt="Foto de perfil de Fernandororonoa" src="data:image/png;base64,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">
+      <div class="pinfo"><h1>Fernandororonoa</h1><p id="followers">18 seguidores</p></div>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="Fuente del stream" id="segS">
+          <button type="button" data-s="twitch" aria-pressed="true">Twitch</button>
+          <button type="button" data-s="okru" aria-pressed="false">OK.ru</button>
+        </div>
+        <div class="seg" role="group" aria-label="Calidad del stream" id="segQ">
+          <button type="button" data-q="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-q="720" aria-pressed="false">720p</button>
+          <button type="button" data-q="1080" aria-pressed="false">1080p</button>
+        </div>
+        <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
       </div>
-      <div class="seg" role="group" aria-label="Calidad del stream" id="segQ">
-        <button type="button" data-q="auto" aria-pressed="true">Auto</button>
-        <button type="button" data-q="720" aria-pressed="false">720p</button>
-        <button type="button" data-q="1080" aria-pressed="false">1080p</button>
-      </div>
-      <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
-      <a class="btn primary" href="https://www.twitch.tv/fernandororonoa" target="_blank" rel="noopener">Seguir en Twitch</a>
+    </div>
+    <div class="socials" aria-label="Redes">
+      <a class="soc twitch" href="https://www.twitch.tv/fernandororonoa" target="_blank" rel="noopener" id="lnkTwitch">Twitch</a>
+      <a class="soc kick" href="https://kick.com/fernandororonoa" target="_blank" rel="noopener" id="lnkKick">Kick</a>
+      <a class="soc tiktok" href="#" target="_blank" rel="noopener" id="lnkTiktok">TikTok</a>
+      <a class="soc patreon" href="#" target="_blank" rel="noopener" id="lnkPatreon">Patreon</a>
+      <a class="soc discord" href="#" target="_blank" rel="noopener" id="lnkDiscord">Discord</a>
     </div>
     <div class="qnote" id="qNote"></div>
   </section>
@@ -145,6 +162,8 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "fernandororonoa"; // Kick (cámbialo si tu usuario es distinto)
+const FOLLOWERS = "18 seguidores";   // texto bajo el nombre
+const AVATAR_URL = "";               // opcional: ruta de otra foto, ej. "avatar.png"
 const LINKS = { tiktok: "#", patreon: "#", discord: "#" };   // pon aquí tus enlaces
 const OK_ID = "17157409021571";      // ID del video en ok.ru
 const DEFAULT_SOURCE = "twitch";     // "twitch" u "okru"
@@ -154,6 +173,9 @@ const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://).
 const $ = id => document.getElementById(id);
 const PARENT = location.hostname || "localhost";
 
+$("followers").textContent = FOLLOWERS;
+if (AVATAR_URL) $("avatar").src = AVATAR_URL;
+$("lnkKick").href = "https://kick.com/" + KICK_CHANNEL;
 $("lnkTiktok").href = LINKS.tiktok;
 $("lnkPatreon").href = LINKS.patreon;
 $("lnkDiscord").href = LINKS.discord;
@@ -176,15 +198,24 @@ function applyQuality(){
   if (wanted === "auto") { try { player.setQuality("auto"); } catch(e){} note.textContent = ""; return; }
   let qs = [];
   try { qs = player.getQualities() || []; } catch(e){}
-  const hit = qs.find(q => (q.name||"").startsWith(wanted + "p") || (q.height === +wanted));
-  if (hit) { player.setQuality(hit.name || hit.group); note.textContent = ""; }
-  else note.textContent = qs.length
-    ? "El canal no ofrece " + wanted + "p en este momento."
-    : "Las calidades aparecen cuando el canal está en directo.";
+  if (!qs.length) {
+    note.textContent = "Las calidades aparecen cuando el canal está en directo.";
+    if ((applyQuality.n = (applyQuality.n || 0) + 1) < 8) setTimeout(applyQuality, 2500);
+    return;
+  }
+  applyQuality.n = 0;
+  const nm = q => (q.name || q.group || "").toString();
+  let hit = qs.find(q => nm(q).startsWith(wanted + "p") || q.height === +wanted);
+  if (!hit && wanted === "1080") {
+    hit = qs.find(q => nm(q) === "chunked" || /source|fuente|original/i.test(nm(q)));
+    if (hit) { player.setQuality(hit.group || hit.name); note.textContent = "1080p: usando la calidad original del canal."; return; }
+  }
+  if (hit) { player.setQuality(hit.group || hit.name); note.textContent = ""; }
+  else note.textContent = "El canal no ofrece " + wanted + "p en este momento.";
 }
 
 document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
-  wanted = b.dataset.q;
+  wanted = b.dataset.q; applyQuality.n = 0;
   document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
   applyQuality();
 }));
