@@ -109,7 +109,7 @@ nav{margin-left:0;width:100%}
       <div class="bar">
         <div class="seg" role="group" aria-label="Fuente del stream" id="segS">
           <button type="button" data-s="twitch" aria-pressed="true">Twitch</button>
-          <button type="button" data-s="okru" aria-pressed="false">OK.ru</button>
+          <button type="button" data-s="vdo" aria-pressed="false">Baja latencia</button>
         </div>
         <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
       </div>
@@ -165,8 +165,8 @@ const LINKS = {
   patreon: "https://www.patreon.com/cw/hoytereaccionoEsp/home",
   discord: "https://discord.com/invite/EcDz5z68H9"
 };
-const OK_ID = "17157409021571";      // ID del video en ok.ru
-const DEFAULT_SOURCE = "twitch";     // "twitch" u "okru"
+const VDO_URL = "https://vdo.ninja/?view=RR6Tghm";   // enlace de VDO.Ninja (baja latencia)
+const DEFAULT_SOURCE = "twitch";     // "twitch" o "vdo"
 const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://). Si lo pones, se usa en lugar de Twitch.
 /* ========================= */
 
@@ -240,10 +240,10 @@ function setSource(src){
   const box = $("player");
   if (hls) { try { hls.destroy(); } catch(e){} }
   hls = null; player = null;
-  const ok = src === "okru";
+  const ok = src === "vdo";
     if (ok) {
-    box.innerHTML = '<iframe src="https://ok.ru/videoembed/' + OK_ID + '?autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen title="Stream en OK.ru"></iframe>';
-    const t = $("liveTag"); t.textContent = "OK.ru"; t.classList.remove("on");
+    box.innerHTML = '<iframe src="' + VDO_URL + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="Stream en VDO.Ninja"></iframe>';
+    const t = $("liveTag"); t.textContent = "VDO.Ninja"; t.classList.remove("on");
   } else {
     box.innerHTML = '<div id="tw"></div>';
     setLive(false); $("liveTag").textContent = "Comprobando…";
@@ -251,7 +251,7 @@ function setSource(src){
   }
 }
 document.querySelectorAll("#segS button").forEach(b => b.addEventListener("click", () => setSource(b.dataset.s)));
-setSource(source === "okru" ? "okru" : "twitch");
+setSource(source === "vdo" ? "vdo" : "twitch");
 
 /* ---------- Chat (Twitch + Kick) ---------- */
 const PLATFORMS = {
