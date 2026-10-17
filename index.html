@@ -3,160 +3,368 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>El Fuanza · En vivo</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Fernandororonoa - Directo</title>
 <style>
-:root{
-  --bg:#14101f; --panel:#1e1830; --line:#2f2747; --text:#f1ecff; --muted:#a79fc4;
-  --accent:#9b6bff; --live:#ff4d6d; --ok:#f7931e;
-  --radius:14px;
-}
-@media (prefers-color-scheme: light){
-  :root{ --bg:#f5f2fc; --panel:#ffffff; --line:#ddd5f0; --text:#1d1530; --muted:#6b6385; }
-}
+:root{--bg:#0e0d12;--panel:#17151e;--panel2:#1f1c29;--line:#2c2839;--text:#f1eef8;--mute:#9a94ad;--accent:#9146ff;--accent2:#b58bff;--ok:#3ddc97;--bad:#ff6b6b}
 *{box-sizing:border-box;margin:0}
-html,body{min-height:100%}
-body{
-  background:var(--bg); color:var(--text);
-  font-family:'Figtree',system-ui,sans-serif; line-height:1.5;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;display:flex;flex-direction:column;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;font-weight:800}
+.live{margin-left:6px;font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;background:var(--panel2);color:var(--mute);border:1px solid var(--line)}
+.live.on{color:var(--ok);border-color:var(--ok)}
+nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+nav a{padding:7px 14px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:14px;font-weight:600;transition:background .15s,border-color .15s}
+nav a:hover{border-color:var(--accent);background:#2a2540}
+nav a.patreon:hover{border-color:#ff424d}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;padding:12px;min-height:0}
+main.nochat{grid-template-columns:minmax(0,1fr)}
+.stage{display:flex;flex-direction:column;gap:10px;min-width:0}
+.player{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;width:100%;max-height:calc(100vh - 170px);border:1px solid var(--line)}
+.player #tw,.player iframe,.player video{position:absolute;inset:0;width:100%;height:100%;border:0}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bar h1{font-size:17px;flex:1;min-width:160px}
+.bar h1 small{display:block;font-size:13px;font-weight:400;color:var(--mute)}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent)}
+.btn.primary:hover{background:#7d33f0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel2)}
+.seg button{background:none;border:0;padding:8px 13px;font-size:14px;font-weight:600;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.seg button:not([aria-pressed=true]):hover{color:var(--text)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.qnote{font-size:12px;color:var(--mute)}
+aside{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:480px;height:calc(100vh - 80px);position:sticky;top:12px}
+main.nochat aside{display:none}
+.chead{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.chead strong{flex:1;font-size:14px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.dot.ok{background:var(--ok)}.dot.load{background:#ffc857;animation:p 1s infinite}.dot.err{background:var(--bad)}
+@keyframes p{50%{opacity:.3}}
+.ib{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:none;display:grid;place-items:center}
+.ib:hover{background:var(--panel);border-color:var(--line)}
+.ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib.spin svg{animation:r .7s linear}
+@keyframes r{to{transform:rotate(360deg)}}
+.tabs{display:flex;border-bottom:1px solid var(--line);background:var(--panel2)}
+.tabs button{flex:1;padding:9px 6px;background:none;border:0;border-bottom:3px solid transparent;font-weight:700;font-size:14px;color:var(--mute);display:flex;align-items:center;justify-content:center;gap:7px}
+.tabs button[aria-selected=true]{color:var(--text)}
+.tabs button[data-p=twitch][aria-selected=true]{border-color:#9146ff}
+.tabs button[data-p=kick][aria-selected=true]{border-color:#53fc18}
+.tabs .dot{width:7px;height:7px}
+.pane{position:absolute;inset:0;display:none}
+.pane.on{display:block}
+.cbody{position:relative;flex:1;min-height:0}
+.cbody iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#18181b}
+.cover{position:absolute;inset:0;background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;color:var(--mute);z-index:2}
+.cover[hidden]{display:none}
+.spinner{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite}
+.cfoot{padding:8px 10px;border-top:1px solid var(--line);background:var(--panel2);font-size:12px;color:var(--mute);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cfoot button{background:none;border:0;color:var(--accent2);font-size:12px;font-weight:600;text-decoration:underline;padding:0}
+.showchat{display:none}
+main.nochat .showchat{display:inline-flex}
+footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;text-align:center}
+@media(max-width:960px){
+main{grid-template-columns:1fr}
+aside{position:static;height:560px;min-height:0}
+.player{max-height:none}
+nav{margin-left:0;width:100%}
 }
-header{
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
-  padding:14px clamp(14px,3vw,32px); border-bottom:1px solid var(--line);
-}
-.brand{font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:1.4rem; letter-spacing:-.02em}
-.brand span{color:var(--accent)}
-.follow{
-  background:var(--accent); color:#fff; text-decoration:none; font-weight:600;
-  padding:8px 16px; border-radius:999px; font-size:.92rem;
-}
-.follow:focus-visible,.tab:focus-visible{outline:3px solid var(--text); outline-offset:2px}
-main{
-  display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px;
-  padding:16px clamp(14px,3vw,32px) 32px; max-width:1500px; margin:auto;
-}
-.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
-.tabs{display:flex; gap:8px; flex-wrap:wrap}
-.tab{
-  border:1px solid var(--line); background:var(--panel); color:var(--text);
-  padding:8px 16px; border-radius:999px; font:inherit; font-weight:500; cursor:pointer;
-  display:flex; align-items:center; gap:8px;
-}
-.tab .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.tab[aria-selected="true"]{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
-.tab[aria-selected="true"] .dot{background:var(--live)}
-.player{
-  position:relative; aspect-ratio:16/9; background:#000;
-  border-radius:var(--radius); overflow:hidden; border:1px solid var(--line);
-}
-.player iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
-.empty{
-  position:absolute; inset:0; display:grid; place-items:center; text-align:center;
-  padding:24px; color:#cfc8e6; background:#0d0a16;
-}
-.empty code{background:#241d38; padding:2px 6px; border-radius:6px; color:#fff}
-.title h1{font-family:'Bricolage Grotesque',sans-serif; font-size:clamp(1.3rem,2.6vw,1.9rem); letter-spacing:-.02em; line-height:1.15}
-.title p{color:var(--muted); margin-top:4px}
-.chat{
-  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
-  background:var(--panel); min-height:480px; height:calc(100vh - 110px); max-height:820px;
-  position:sticky; top:16px;
-}
-.chat iframe{width:100%; height:100%; border:0}
-footer{text-align:center; color:var(--muted); font-size:.85rem; padding:0 16px 24px}
-@media (max-width:960px){
-  main{grid-template-columns:1fr}
-  .chat{position:static; height:520px}
-}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">El <span>Fuanza</span></div>
-  <a class="follow" id="twitchLink" target="_blank" rel="noopener">Seguir en Twitch</a>
+  <a class="brand" href="/" aria-label="Fernandororonoa"><span class="logo">F</span>Fernandororonoa<span class="live" id="liveTag">Comprobando…</span></a>
+  <nav aria-label="Redes">
+    <a href="https://www.twitch.tv/fernandororonoa" target="_blank" rel="noopener">Twitch</a>
+    <a href="#" id="lnkTiktok" target="_blank" rel="noopener">TikTok</a>
+    <a href="#" id="lnkPatreon" class="patreon" target="_blank" rel="noopener">Patreon</a>
+    <a href="#" id="lnkDiscord" target="_blank" rel="noopener">Discord</a>
+  </nav>
 </header>
 
-<main>
+<main id="main">
   <section class="stage">
-    <div class="tabs" role="tablist" aria-label="Servidores"></div>
-    <div class="player" id="player"></div>
-    <div class="title">
-      <h1 id="streamTitle"></h1>
-      <p>Si un servidor falla, prueba con otro.</p>
+    <div class="player" id="player"><div id="tw"></div></div>
+    <div class="bar">
+      <h1>Directo de Fernandororonoa<small>Directos en Twitch. ¡Pasa por el chat y sigue el canal!</small></h1>
+      <div class="seg" role="group" aria-label="Fuente del stream" id="segS">
+        <button type="button" data-s="twitch" aria-pressed="true">Twitch</button>
+        <button type="button" data-s="okru" aria-pressed="false">OK.ru</button>
+      </div>
+      <div class="seg" role="group" aria-label="Calidad del stream" id="segQ">
+        <button type="button" data-q="auto" aria-pressed="true">Auto</button>
+        <button type="button" data-q="720" aria-pressed="false">720p</button>
+        <button type="button" data-q="1080" aria-pressed="false">1080p</button>
+      </div>
+      <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
+      <a class="btn primary" href="https://www.twitch.tv/fernandororonoa" target="_blank" rel="noopener">Seguir en Twitch</a>
     </div>
+    <div class="qnote" id="qNote"></div>
   </section>
 
-  <aside class="chat" aria-label="Chat de Twitch">
-    <iframe id="chat" title="Chat de Twitch"></iframe>
+  <aside id="chatPanel" aria-label="Chat del stream">
+    <div class="chead">
+      <strong><span id="cState">Chat</span></strong>
+      <button class="ib" id="btnRefresh" type="button" title="Refrescar chat" aria-label="Refrescar chat"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+      <button class="ib" id="btnPop" type="button" title="Abrir chat en ventana" aria-label="Abrir chat en ventana"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+      <button class="ib" id="btnHide" type="button" title="Ocultar chat" aria-label="Ocultar chat"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-p="twitch" aria-selected="true"><span class="dot load"></span>Twitch</button>
+      <button type="button" role="tab" data-p="kick" aria-selected="false"><span class="dot load"></span>Kick</button>
+    </div>
+    <div class="cbody">
+      <div class="pane on" data-p="twitch">
+        <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
+        <iframe title="Chat de Twitch" allow="clipboard-write"></iframe>
+      </div>
+      <div class="pane" data-p="kick">
+        <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
+        <iframe title="Chat de Kick" allow="clipboard-write"></iframe>
+      </div>
+    </div>
+    <div class="cfoot">
+      <span>¿No puedes escribir?</span>
+      <button type="button" id="btnLogin">Iniciar sesión</button>
+    </div>
   </aside>
 </main>
 
-<footer>Transmisión de <span id="footerName"></span></footer>
+<footer>© Fernandororonoa</footer>
 
+<script src="https://embed.twitch.tv/embed/v1.js"></script>
 <script>
-/* ============ CONFIGURACIÓN: edita solo esta parte ============ */
-const CONFIG = {
-  twitchChannel: "fernandororonoa",
-  title: "En vivo con Fernando",
-  // Pega aquí el ID del video/transmisión de ok.ru
-  // Ejemplo: https://ok.ru/video/1234567890  →  "1234567890"
-  okruVideoId: ""
-};
-/* =============================================================== */
+/* ===== CONFIGURACIÓN ===== */
+const CHANNEL = "fernandororonoa";      // Twitch
+const KICK_CHANNEL = "fernandororonoa"; // Kick (cámbialo si tu usuario es distinto)
+const LINKS = { tiktok: "#", patreon: "#", discord: "#" };   // pon aquí tus enlaces
+const OK_ID = "17157409021571";      // ID del video en ok.ru
+const DEFAULT_SOURCE = "twitch";     // "twitch" u "okru"
+const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://). Si lo pones, se usa en lugar de Twitch.
+/* ========================= */
 
-const host = location.hostname || "localhost";
+const $ = id => document.getElementById(id);
+const PARENT = location.hostname || "localhost";
 
-const servers = [
-  {
-    name: "Twitch",
-    src: `https://player.twitch.tv/?channel=${CONFIG.twitchChannel}&parent=${host}&autoplay=true&muted=false`
-  },
-  {
-    name: "OK.ru",
-    src: CONFIG.okruVideoId ? `https://ok.ru/videoembed/${CONFIG.okruVideoId}` : null
+$("lnkTiktok").href = LINKS.tiktok;
+$("lnkPatreon").href = LINKS.patreon;
+$("lnkDiscord").href = LINKS.discord;
+
+/* ---------- Reproductor ---------- */
+let player = null, hls = null, wanted = "auto";
+
+function applyQuality(){
+  const note = $("qNote");
+  if (hls) {
+    const lv = hls.levels || [];
+    if (wanted === "auto") { hls.currentLevel = -1; note.textContent = ""; return; }
+    const h = +wanted;
+    let idx = -1;
+    lv.forEach((l,i)=>{ if (l.height === h) idx = i; });
+    if (idx < 0) { note.textContent = "Esta calidad no está disponible en el stream ahora mismo."; return; }
+    hls.currentLevel = idx; note.textContent = ""; return;
   }
-];
-
-const tabs = document.querySelector(".tabs");
-const player = document.getElementById("player");
-
-function show(i){
-  [...tabs.children].forEach((t,idx)=>t.setAttribute("aria-selected", idx===i));
-  const s = servers[i];
-  player.innerHTML = "";
-  if(!s.src){
-    player.innerHTML = `<div class="empty"><p>Este servidor aún no está configurado.<br>
-      Agrega el ID en <code>okruVideoId</code> dentro de <code>index.html</code>.</p></div>`;
-    return;
-  }
-  const f = document.createElement("iframe");
-  f.src = s.src;
-  f.title = "Servidor " + s.name;
-  f.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
-  f.allowFullscreen = true;
-  player.appendChild(f);
+  if (!player) return;
+  if (wanted === "auto") { try { player.setQuality("auto"); } catch(e){} note.textContent = ""; return; }
+  let qs = [];
+  try { qs = player.getQualities() || []; } catch(e){}
+  const hit = qs.find(q => (q.name||"").startsWith(wanted + "p") || (q.height === +wanted));
+  if (hit) { player.setQuality(hit.name || hit.group); note.textContent = ""; }
+  else note.textContent = qs.length
+    ? "El canal no ofrece " + wanted + "p en este momento."
+    : "Las calidades aparecen cuando el canal está en directo.";
 }
 
-servers.forEach((s,i)=>{
-  const b = document.createElement("button");
-  b.className = "tab"; b.role = "tab";
-  b.innerHTML = `<span class="dot"></span>${s.name}`;
-  b.onclick = ()=>show(i);
-  tabs.appendChild(b);
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  wanted = b.dataset.q;
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  applyQuality();
+}));
+
+function setLive(on){
+  const t = $("liveTag");
+  t.textContent = on ? "En directo" : "Desconectado";
+  t.classList.toggle("on", on);
+}
+
+function startTwitch(){
+  player = new Twitch.Embed("tw", {
+    width: "100%", height: "100%", channel: CHANNEL, parent: [PARENT],
+    layout: "video", autoplay: true, muted: true, theme: "dark"
+  });
+  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
+    const p = player.getPlayer();
+    p.addEventListener(Twitch.Player.ONLINE, () => { setLive(true); setTimeout(applyQuality, 1500); });
+    p.addEventListener(Twitch.Player.OFFLINE, () => setLive(false));
+    p.addEventListener(Twitch.Player.PLAYING, () => { setLive(true); applyQuality(); });
+  });
+  /* el objeto Embed expone getQuality/setQuality a través del player interno */
+  const orig = player;
+  player = {
+    setQuality: q => orig.getPlayer().setQuality(q),
+    getQualities: () => orig.getPlayer().getQualities()
+  };
+}
+
+function startHls(){
+  const box = $("player");
+  box.innerHTML = '<video id="vid" controls playsinline autoplay muted></video>';
+  const v = $("vid");
+  const go = () => {
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({ lowLatencyMode: true });
+      hls.loadSource(HLS_URL); hls.attachMedia(v);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { setLive(true); applyQuality(); v.play().catch(()=>{}); });
+      hls.on(Hls.Events.ERROR, (e,d) => { if (d.fatal) { setLive(false); setTimeout(()=>hls.startLoad(), 4000); } });
+    } else { v.src = HLS_URL; setLive(true); }
+  };
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+  s.onload = go; s.onerror = () => { v.src = HLS_URL; };
+  document.head.appendChild(s);
+}
+
+let source = DEFAULT_SOURCE;
+try { source = localStorage.getItem("source") || DEFAULT_SOURCE; } catch(e){}
+
+function setSource(src){
+  source = src;
+  try { localStorage.setItem("source", src); } catch(e){}
+  document.querySelectorAll("#segS button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === src));
+  const box = $("player");
+  if (hls) { try { hls.destroy(); } catch(e){} }
+  hls = null; player = null;
+  const ok = src === "okru";
+  document.querySelectorAll("#segQ button").forEach(b => b.disabled = ok);
+  if (ok) {
+    box.innerHTML = '<iframe src="https://ok.ru/videoembed/' + OK_ID + '?autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen title="Stream en OK.ru"></iframe>';
+    const t = $("liveTag"); t.textContent = "OK.ru"; t.classList.remove("on");
+    $("qNote").textContent = "En OK.ru la calidad se cambia dentro del reproductor (icono de engranaje).";
+  } else {
+    box.innerHTML = '<div id="tw"></div>';
+    $("qNote").textContent = "";
+    setLive(false); $("liveTag").textContent = "Comprobando…";
+    HLS_URL ? startHls() : startTwitch();
+  }
+}
+document.querySelectorAll("#segS button").forEach(b => b.addEventListener("click", () => setSource(b.dataset.s)));
+setSource(source === "okru" ? "okru" : "twitch");
+
+/* ---------- Chat (Twitch + Kick) ---------- */
+const PLATFORMS = {
+  twitch:{ url:"https://www.twitch.tv/embed/"+CHANNEL+"/chat?parent="+encodeURIComponent(PARENT)+"&darkpopout",
+           pop:"https://www.twitch.tv/popout/"+CHANNEL+"/chat?popout=", login:"https://www.twitch.tv/login", name:"Twitch" },
+  kick:  { url:"https://kick.com/popout/"+KICK_CHANNEL+"/chat",
+           pop:"https://kick.com/popout/"+KICK_CHANNEL+"/chat", login:"https://kick.com/", name:"Kick" }
+};
+let active = "twitch", hiddenAt = 0;
+
+Object.keys(PLATFORMS).forEach(k => {
+  const p = PLATFORMS[k];
+  p.pane = document.querySelector('.pane[data-p="'+k+'"]');
+  p.frame = p.pane.querySelector("iframe");
+  p.cover = p.pane.querySelector(".cover");
+  p.tab = document.querySelector('.tabs button[data-p="'+k+'"]');
+  p.dot = p.tab.querySelector(".dot");
+  p.tries = 0; p.loaded = false; p.timer = null; p.started = false;
+  p.frame.addEventListener("load", () => {
+    if (p.frame.getAttribute("src") === "about:blank" || !p.frame.getAttribute("src")) return;
+    p.loaded = true; p.tries = 0; clearTimeout(p.timer);
+    p.cover.hidden = true; setDot(p, "ok"); updateHead();
+  });
+  p.pane.querySelector(".cretry").addEventListener("click", () => loadChat(k, true));
 });
 
-document.getElementById("streamTitle").textContent = CONFIG.title;
-document.getElementById("footerName").textContent = CONFIG.twitchChannel;
-document.getElementById("twitchLink").href = `https://www.twitch.tv/${CONFIG.twitchChannel}`;
-document.getElementById("chat").src =
-  `https://www.twitch.tv/embed/${CONFIG.twitchChannel}/chat?parent=${host}&darkpopout`;
+function setDot(p, kind){ p.dot.className = "dot " + kind; }
+function cover(p, msg, failed){
+  p.cover.hidden = false;
+  p.cover.querySelector(".cmsg").textContent = msg;
+  p.cover.querySelector(".spinner").style.display = failed ? "none" : "";
+  p.cover.querySelector(".cretry").hidden = !failed;
+}
+function updateHead(){
+  const p = PLATFORMS[active];
+  $("cState").textContent = p.loaded ? "Chat de " + p.name + " conectado" : "Chat de " + p.name;
+}
 
-show(0);
+function loadChat(k, manual){
+  const p = PLATFORMS[k];
+  p.started = true;
+  if (manual) p.tries = 0;
+  clearTimeout(p.timer);
+  p.loaded = false;
+  setDot(p, "load");
+  cover(p, p.tries ? "Reintentando conexión ("+p.tries+"/3)…" : "Conectando con el chat de "+p.name+"…", false);
+  p.frame.src = "about:blank";
+  setTimeout(() => { p.frame.src = p.url; }, 80);
+  p.timer = setTimeout(() => {
+    if (p.loaded) return;
+    if (p.tries < 3) { p.tries++; loadChat(k, false); }
+    else { setDot(p, "err"); cover(p, "No se pudo cargar el chat de "+p.name+". Revisa tu conexión e inténtalo de nuevo.", true); }
+  }, 9000 + p.tries * 3000);
+  updateHead();
+}
+
+function showTab(k){
+  active = k;
+  Object.keys(PLATFORMS).forEach(n => {
+    const p = PLATFORMS[n], on = n === k;
+    p.pane.classList.toggle("on", on);
+    p.tab.setAttribute("aria-selected", on);
+  });
+  if (!PLATFORMS[k].started) loadChat(k, true);
+  updateHead();
+}
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.p)));
+
+$("btnRefresh").addEventListener("click", () => {
+  const b = $("btnRefresh");
+  b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
+  loadChat(active, true);
+});
+
+/* Iniciar sesión: ventana de login y recarga del chat al cerrarla */
+$("btnLogin").addEventListener("click", () => {
+  const k = active, p = PLATFORMS[k];
+  const w = 480, h = 700;
+  const x = Math.max(0, (screen.width - w) / 2), y = Math.max(0, (screen.height - h) / 2);
+  const popup = window.open(p.login, "login_"+k, "width="+w+",height="+h+",left="+x+",top="+y);
+  if (!popup) { window.open(p.login, "_blank", "noopener"); return; }
+  $("cState").textContent = "Esperando inicio de sesión…";
+  const iv = setInterval(() => { if (popup.closed) { clearInterval(iv); loadChat(k, true); } }, 600);
+});
+$("btnPop").addEventListener("click", () => {
+  window.open(PLATFORMS[active].pop, "chat_"+active, "width=420,height=700");
+});
+
+/* Mostrar / ocultar chat */
+function setChat(show){
+  $("main").classList.toggle("nochat", !show);
+  try { localStorage.setItem("chat", show ? "1" : "0"); } catch(e){}
+  if (show && !PLATFORMS[active].loaded) loadChat(active, true);
+}
+$("btnHide").addEventListener("click", () => setChat(false));
+$("showChat").addEventListener("click", () => setChat(true));
+
+/* Recuperación automática */
+window.addEventListener("online", () => Object.keys(PLATFORMS).forEach(k => PLATFORMS[k].started && loadChat(k, true)));
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 5*60*1000 && !$("main").classList.contains("nochat")) loadChat(active, true);
+});
+
+let startHidden = false;
+try { startHidden = localStorage.getItem("chat") === "0"; } catch(e){}
+if (startHidden) $("main").classList.add("nochat");
+else { loadChat("twitch", true); loadChat("kick", true); }
 </script>
 </body>
 </html>
