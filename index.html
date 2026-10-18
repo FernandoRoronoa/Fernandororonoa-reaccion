@@ -98,6 +98,13 @@ main.nochat aside{display:none}
 .kwrite [hidden]{display:none!important}
 .kwrite .kbtn{background:#53fc18;color:#0b0e0a;border:0;font-size:14px;font-weight:700;padding:9px 18px;border-radius:8px}
 .kwrite .kbtn:hover{filter:brightness(1.1)}
+.kwrite .kemo{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:0 11px;font-size:18px;line-height:1}
+.kwrite .kemo:hover{border-color:#53fc18}
+#kEmotes{position:absolute;left:8px;right:8px;bottom:136px;max-height:210px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;z-index:4;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+#kEmotes[hidden]{display:none}
+#kEmotes button{background:none;border:0;padding:4px;border-radius:6px;display:grid;place-items:center}
+#kEmotes button:hover{background:var(--panel)}
+#kEmotes img{width:32px;height:32px;object-fit:contain}
 .showchat{display:none}
 main.nochat .showchat{display:inline-flex}
 footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;text-align:center}
@@ -158,11 +165,12 @@ nav{margin-left:0;width:100%}
         <div class="kwrite">
           <div id="kLogged" hidden>
             <div class="khead"><span id="kUser">Chateando en Kick</span><button type="button" class="klink" id="kLogout">Salir</button></div>
-            <div class="krow"><input id="kMsg" type="text" maxlength="500" placeholder="Enviar un mensaje" autocomplete="off" aria-label="Mensaje para el chat de Kick"><button type="button" class="kbtn" id="kSend">Chatear</button></div>
+            <div class="krow"><button type="button" class="kemo" id="kEmoBtn" title="Emotes" aria-label="Emotes">😀</button><input id="kMsg" type="text" maxlength="500" placeholder="Enviar un mensaje" autocomplete="off" aria-label="Mensaje para el chat de Kick"><button type="button" class="kbtn" id="kSend">Chatear</button></div>
           </div>
           <div id="kOut"><span id="kOutText"></span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
           <div class="kstat" id="kStat" aria-live="polite"></div>
         </div>
+        <div id="kEmotes" hidden></div>
       </div>
     </div>
     <div class="cfoot" id="cfoot">
@@ -178,6 +186,15 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
+/* Emotes de Kick para el selector 😀: ["nombre", id]. El id es el número de la imagen del emote.
+   Cómo sacarlo: en el chat de Kick, clic derecho sobre el emote → "Copiar dirección de la imagen".
+   La dirección es https://files.kick.com/emotes/NUMERO/fullsize → ese NUMERO es el id. */
+const KICK_EMOTES = [
+  ["ThisIsFine", 37236],
+  ["peepoShy", 39275],
+  ["WeirdChamp", 37240]
+  /* añade aquí los de tu canal, por ejemplo: ["MiEmote", 1234567], */
+];
 const KICK_API = "https://kick-chat.bazingatbbt2.workers.dev";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
@@ -364,6 +381,32 @@ $("kSend").addEventListener("click", kSend);
 kMsg.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); kSend(); } });
 $("kLogout").addEventListener("click", () => { kAuthSet(null); kStatus(""); kRender(); });
 kRender(); kWho();
+
+/* ---------- Selector de emotes de Kick ---------- */
+(function(){
+  const box = $("kEmotes"), btn = $("kEmoBtn");
+  KICK_EMOTES.forEach(([name, id]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.title = name;
+    const img = document.createElement("img");
+    img.src = "https://files.kick.com/emotes/" + id + "/fullsize"; img.alt = name; img.loading = "lazy";
+    b.appendChild(img);
+    b.addEventListener("click", () => {
+      const tag = "[emote:" + id + ":" + name + "]";
+      const i = kMsg.selectionStart ?? kMsg.value.length, j = kMsg.selectionEnd ?? i;
+      const add = tag + " ";
+      if (kMsg.value.length + add.length > kMsg.maxLength) return;
+      kMsg.value = kMsg.value.slice(0, i) + add + kMsg.value.slice(j);
+      kMsg.focus(); kMsg.setSelectionRange(i + add.length, i + add.length);
+    });
+    box.appendChild(b);
+  });
+  btn.addEventListener("click", e => { e.stopPropagation(); box.hidden = !box.hidden; });
+  document.addEventListener("click", e => { if (!box.contains(e.target)) box.hidden = true; });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") box.hidden = true; });
+  $("kLogout").addEventListener("click", () => { box.hidden = true; });
+  if (!KICK_EMOTES.length) btn.hidden = true;
+})();
 $("btnPop").addEventListener("click", () => {
   if (active === "kick") writeKick(); else window.open(PLATFORMS[active].pop, "chat_"+active, "width=420,height=700");
 });
