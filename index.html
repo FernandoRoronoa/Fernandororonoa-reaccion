@@ -119,15 +119,11 @@ nav{margin-left:0;width:100%}
 
 <main id="main">
   <section class="stage">
-    <div class="player" id="player"><div id="tw"></div></div>
+    <div class="player" id="player"><iframe id="okplayer" title="Stream en directo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
     <div class="profile">
       <img class="avatar" id="avatar" alt="Foto de perfil de HoyTeReacciono" src="https://static-cdn.jtvnw.net/jtv_user_pictures/9cbb64ee-d1f1-456a-8075-99cd4abe4db1-profile_image-300x300.png" onerror="this.onerror=null;this.removeAttribute('src')">
       <div class="pinfo"><h1>HoyTeReacciono <a class="subbtn" id="lnkSub" href="https://www.twitch.tv/hoytereacciono" target="_blank" rel="noopener">Suscribirse</a></h1><p id="followers"></p></div>
       <div class="bar">
-        <div class="seg" role="group" aria-label="Fuente del stream" id="segS">
-          <button type="button" data-s="twitch" aria-pressed="true">Twitch</button>
-          <button type="button" data-s="vdo" aria-pressed="false">Baja latencia</button>
-        </div>
         <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
       </div>
     </div>
@@ -178,12 +174,11 @@ nav{margin-left:0;width:100%}
 
 <footer>© HoyTeReacciono</footer>
 
-<script src="https://embed.twitch.tv/embed/v1.js"></script>
 <script>
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
-const KICK_API = "";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
+const KICK_API = "https://kick-chat.bazingatbbt2.workers.dev";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
 const LINKS = {
@@ -191,9 +186,7 @@ const LINKS = {
   patreon: "https://www.patreon.com/cw/hoytereaccionoEsp/home",
   discord: "https://discord.com/invite/EcDz5z68H9"
 };
-const VDO_URL = "https://ok.ru/videoembed/17171047980675";   // enlace de VDO.Ninja (baja latencia)
-const DEFAULT_SOURCE = "twitch";     // "twitch" o "vdo"
-const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://). Si lo pones, se usa en lugar de Twitch.
+const STREAM_URL = "https://ok.ru/videoembed/17171047980675";   // reproductor de ok.ru
 /* ========================= */
 
 const $ = id => document.getElementById(id);
@@ -209,75 +202,9 @@ $("lnkTiktok").href = LINKS.tiktok;
 $("lnkPatreon").href = LINKS.patreon;
 $("lnkDiscord").href = LINKS.discord;
 
-/* ---------- Reproductor ---------- */
-let player = null, hls = null;
-
-
-function setLive(on){
-  const t = $("liveTag");
-  t.textContent = on ? "En directo" : "Desconectado";
-  t.classList.toggle("on", on);
-}
-
-function startTwitch(){
-  player = new Twitch.Embed("tw", {
-    width: "100%", height: "100%", channel: CHANNEL, parent: [PARENT],
-    layout: "video", autoplay: true, muted: true, theme: "dark"
-  });
-  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
-    const p = player.getPlayer();
-    p.addEventListener(Twitch.Player.ONLINE, () => { setLive(true);  });
-    p.addEventListener(Twitch.Player.OFFLINE, () => setLive(false));
-    p.addEventListener(Twitch.Player.PLAYING, () => { setLive(true);  });
-  });
-  /* el objeto Embed expone getQuality/setQuality a través del player interno */
-  const orig = player;
-  player = {
-    setQuality: q => orig.getPlayer().setQuality(q),
-    getQualities: () => orig.getPlayer().getQualities()
-  };
-}
-
-function startHls(){
-  const box = $("player");
-  box.innerHTML = '<video id="vid" controls playsinline autoplay muted></video>';
-  const v = $("vid");
-  const go = () => {
-    if (window.Hls && Hls.isSupported()) {
-      hls = new Hls({ lowLatencyMode: true });
-      hls.loadSource(HLS_URL); hls.attachMedia(v);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { setLive(true);  v.play().catch(()=>{}); });
-      hls.on(Hls.Events.ERROR, (e,d) => { if (d.fatal) { setLive(false); setTimeout(()=>hls.startLoad(), 4000); } });
-    } else { v.src = HLS_URL; setLive(true); }
-  };
-  const s = document.createElement("script");
-  s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
-  s.onload = go; s.onerror = () => { v.src = HLS_URL; };
-  document.head.appendChild(s);
-}
-
-let source = DEFAULT_SOURCE;
-try { source = localStorage.getItem("source") || DEFAULT_SOURCE; } catch(e){}
-
-function setSource(src){
-  source = src;
-  try { localStorage.setItem("source", src); } catch(e){}
-  document.querySelectorAll("#segS button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === src));
-  const box = $("player");
-  if (hls) { try { hls.destroy(); } catch(e){} }
-  hls = null; player = null;
-  const ok = src === "vdo";
-    if (ok) {
-    box.innerHTML = '<iframe src="' + VDO_URL + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="Stream en VDO.Ninja"></iframe>';
-    const t = $("liveTag"); t.textContent = "VDO.Ninja"; t.classList.remove("on");
-  } else {
-    box.innerHTML = '<div id="tw"></div>';
-    setLive(false); $("liveTag").textContent = "Comprobando…";
-    HLS_URL ? startHls() : startTwitch();
-  }
-}
-document.querySelectorAll("#segS button").forEach(b => b.addEventListener("click", () => setSource(b.dataset.s)));
-setSource(source === "vdo" ? "vdo" : "twitch");
+/* ---------- Reproductor (ok.ru) ---------- */
+$("okplayer").src = STREAM_URL;
+(function(){ const t = $("liveTag"); t.textContent = "Baja latencia"; t.classList.remove("on"); })();
 
 /* ---------- Chat (Twitch + Kick) ---------- */
 const PLATFORMS = {
