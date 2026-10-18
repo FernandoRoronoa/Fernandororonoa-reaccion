@@ -87,6 +87,12 @@ main.nochat aside{display:none}
 .pane[data-p=kick]{--kh:128px;--kn:110px}
 /* --kh = alto de nuestra barra para escribir; --kn = alto de la caja de escribir propia de Kick (ajústalo si ves mensajes cortados o la caja de Kick asomando) */
 .pane[data-p=kick] iframe{top:0;bottom:calc(var(--kh) - var(--kn));height:auto}
+.kchat{position:absolute;left:0;right:0;top:0;bottom:var(--kh);overflow-y:auto;background:#0e0d12;padding:8px 0;z-index:1;overscroll-behavior:contain}
+.kchat[hidden]{display:none}
+.kchat:empty::before{content:"Esperando mensajes…";display:block;text-align:center;color:var(--mute);font-size:13px;padding:24px 12px}
+.kmsg{padding:3px 12px;font-size:14px;line-height:1.55;word-break:break-word}
+.kmsg b{font-weight:700}
+.kmsg .kemote{height:28px;width:auto;vertical-align:middle;margin:0 1px}
 .kwrite{position:absolute;left:0;right:0;bottom:0;height:var(--kh);z-index:3;background:var(--panel2);border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 14px;text-align:center;font-size:13px;line-height:1.4;color:var(--mute)}
 .kwrite b{color:var(--text)}
 .kwrite>div{width:100%}
@@ -171,6 +177,7 @@ nav{margin-left:0;width:100%}
       <div class="pane" data-p="kick">
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
         <iframe title="Chat de Kick" allow="clipboard-write"></iframe>
+        <div class="kchat" id="kChat" hidden aria-live="polite"></div>
         <div class="kwrite">
           <div id="kLogged" hidden>
             <div class="khead"><span id="kUser">Chateando en Kick</span><button type="button" class="klink" id="kLogout">Salir</button></div>
@@ -195,6 +202,10 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
+/* ID del chat de Kick (número). Con él la página muestra el chat de Kick ella misma, sin la caja de escribir duplicada de Kick.
+   Cómo sacarlo: abre https://kick.com/api/v2/channels/hoytereacciono1 en el navegador y copia el número que sale en "chatroom":{"id":NUMERO.
+   Vacío = se usa el chat normal de Kick (con su caja de escribir). */
+const KICK_CHATROOM_ID = "";
 /* Emotes de Kick para el selector 😀: ["nombre", id]. El id es el número de la imagen del emote.
    Cómo sacarlo: en el chat de Kick, clic derecho sobre el emote → "Copiar dirección de la imagen".
    La dirección es https://files.kick.com/emotes/NUMERO/fullsize → ese NUMERO es el id. */
@@ -317,7 +328,9 @@ function updateHead(){
 
 function loadChat(k, manual){
   const p = PLATFORMS[k];
+  if (k === "kick" && !p.useFrame) { kickStart(p); return; }
   p.started = true;
+  $("kChat").hidden = true; p.frame.style.display = "";
   if (manual) p.tries = 0;
   clearTimeout(p.timer);
   p.loaded = false;
@@ -331,6 +344,73 @@ function loadChat(k, manual){
     else { setDot(p, "err"); cover(p, "No se pudo cargar el chat de "+p.name+". Revisa tu conexión e inténtalo de nuevo.", true); }
   }, 9000 + p.tries * 3000);
   updateHead();
+}
+
+/* ---------- Chat de Kick propio (sin la caja de escribir de Kick) ---------- */
+let kws = null, kRoom = "";
+function closeKickWs(){ const w = kws; kws = null; if (w) { try { w.close(); } catch(e){} } }
+function kickFallback(p){ closeKickWs(); p.useFrame = true; loadChat("kick", true); }
+async function kickRoomId(){
+  if (KICK_CHATROOM_ID) return String(KICK_CHATROOM_ID).trim();
+  if (kRoom) return kRoom;
+  try {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 4000);
+    const r = await fetch("https://kick.com/api/v2/channels/" + encodeURIComponent(KICK_CHANNEL), { signal: c.signal });
+    clearTimeout(t);
+    const d = await r.json();
+    if (d && d.chatroom && d.chatroom.id) kRoom = String(d.chatroom.id);
+  } catch(e){}
+  return kRoom;
+}
+async function kickStart(p){
+  p.started = true; p.loaded = false;
+  clearTimeout(p.timer); closeKickWs();
+  setDot(p, "load"); cover(p, "Conectando con el chat de Kick…", false);
+  $("kChat").textContent = "";
+  const id = await kickRoomId();
+  if (!/^\d+$/.test(id)) return kickFallback(p);
+  p.frame.src = "about:blank"; p.frame.style.display = "none"; $("kChat").hidden = false;
+  kickConnect(p, id);
+  p.timer = setTimeout(() => { if (!p.loaded) kickFallback(p); }, 10000);
+  updateHead();
+}
+function kickConnect(p, id){
+  const ws = new WebSocket("wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false");
+  kws = ws;
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+    if (m.event === "pusher:connection_established") ws.send(JSON.stringify({ event:"pusher:subscribe", data:{ auth:"", channel:"chatrooms." + id + ".v2" } }));
+    else if (m.event === "pusher:ping") ws.send(JSON.stringify({ event:"pusher:pong", data:{} }));
+    else if (m.event === "pusher_internal:subscription_succeeded") {
+      p.loaded = true; clearTimeout(p.timer); p.cover.hidden = true; setDot(p, "ok"); updateHead();
+    }
+    else if (m.event === "App\\Events\\ChatMessageEvent") {
+      let d; try { d = typeof m.data === "string" ? JSON.parse(m.data) : m.data; } catch(e){ return; }
+      kAdd(d);
+    }
+  };
+  ws.onclose = () => { if (kws !== ws) return; setDot(p, "load"); setTimeout(() => { if (kws === ws) kickConnect(p, id); }, 3000); };
+}
+function kAdd(d){
+  if (!d || !d.sender) return;
+  const list = $("kChat"), near = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const row = document.createElement("div"); row.className = "kmsg";
+  const u = document.createElement("b");
+  u.textContent = d.sender.username || "";
+  u.style.color = (d.sender.identity && d.sender.identity.color) || "#b58bff";
+  row.append(u, ": ");
+  const txt = String(d.content || ""), re = /\[emote:(\d+):([^\]]*)\]/g;
+  let last = 0, m;
+  while ((m = re.exec(txt))) {
+    if (m.index > last) row.append(txt.slice(last, m.index));
+    const img = new Image(); img.src = "https://files.kick.com/emotes/" + m[1] + "/fullsize";
+    img.alt = img.title = m[2]; img.className = "kemote"; row.append(img);
+    last = re.lastIndex;
+  }
+  if (last < txt.length) row.append(txt.slice(last));
+  list.append(row);
+  while (list.children.length > 200) list.firstChild.remove();
+  if (near) list.scrollTop = list.scrollHeight;
 }
 
 function showTab(k){
