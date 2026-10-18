@@ -83,9 +83,19 @@ main.nochat aside{display:none}
 .cfoot button{background:none;border:0;color:var(--accent2);font-size:12px;font-weight:600;text-decoration:underline;padding:0}
 .cfoot button.kbtn{background:#53fc18;color:#0b0e0a;text-decoration:none;font-size:13px;font-weight:700;padding:6px 14px;border-radius:8px}
 .cfoot button.kbtn:hover{filter:brightness(1.1)}
-.cfoot button[hidden]{display:none}
+.cfoot button[hidden],.cfoot[hidden]{display:none}
 .kwrite{position:absolute;left:0;right:0;bottom:0;height:128px;z-index:3;background:var(--panel2);border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 14px;text-align:center;font-size:13px;line-height:1.4;color:var(--mute)}
 .kwrite b{color:var(--text)}
+.kwrite>div{width:100%}
+.kwrite #kOut{display:flex;flex-direction:column;align-items:center;gap:8px}
+.kwrite .khead{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;color:var(--text)}
+.kwrite .klink{background:none;border:0;color:var(--accent2);font-size:12px;font-weight:600;text-decoration:underline;padding:0}
+.kwrite .krow{display:flex;gap:8px}
+.kwrite input{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit;font-size:14px}
+.kwrite input:focus{outline:none;border-color:#53fc18}
+.kwrite .kstat{min-height:16px;font-size:12px;margin-top:6px;text-align:left}
+.kwrite .kstat.err{color:var(--bad)}.kwrite .kstat.ok{color:var(--ok)}
+.kwrite [hidden]{display:none!important}
 .kwrite .kbtn{background:#53fc18;color:#0b0e0a;border:0;font-size:14px;font-weight:700;padding:9px 18px;border-radius:8px}
 .kwrite .kbtn:hover{filter:brightness(1.1)}
 .showchat{display:none}
@@ -137,12 +147,31 @@ nav{margin-left:0;width:100%}
       <button class="ib" id="btnPop" type="button" title="Abrir chat en ventana" aria-label="Abrir chat en ventana"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
       <button class="ib" id="btnHide" type="button" title="Ocultar chat" aria-label="Ocultar chat"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-p="twitch" aria-selected="true"><span class="dot load"></span>Twitch</button>
+      <button type="button" role="tab" data-p="kick" aria-selected="false"><span class="dot load"></span>Kick</button>
+    </div>
     <div class="cbody">
-      <div class="pane on" data-p="kick">
+      <div class="pane on" data-p="twitch">
+        <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
+        <iframe title="Chat de Twitch" allow="clipboard-write"></iframe>
+      </div>
+      <div class="pane" data-p="kick">
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
         <iframe title="Chat de Kick" allow="clipboard-write"></iframe>
-        <div class="kwrite"><span><b>Para escribir en Kick</b> inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.</span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
+        <div class="kwrite">
+          <div id="kLogged" hidden>
+            <div class="khead"><span id="kUser">Chateando en Kick</span><button type="button" class="klink" id="kLogout">Salir</button></div>
+            <div class="krow"><input id="kMsg" type="text" maxlength="500" placeholder="Enviar un mensaje" autocomplete="off" aria-label="Mensaje para el chat de Kick"><button type="button" class="kbtn" id="kSend">Chatear</button></div>
+          </div>
+          <div id="kOut"><span id="kOutText"></span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
+          <div class="kstat" id="kStat" aria-live="polite"></div>
+        </div>
       </div>
+    </div>
+    <div class="cfoot" id="cfoot">
+      <span>¿No puedes escribir?</span>
+      <button type="button" id="btnLogin">Iniciar sesión</button>
     </div>
   </aside>
 </main>
@@ -154,6 +183,7 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
+const KICK_API = "";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
 const LINKS = {
@@ -161,7 +191,7 @@ const LINKS = {
   patreon: "https://www.patreon.com/cw/hoytereaccionoEsp/home",
   discord: "https://discord.com/invite/EcDz5z68H9"
 };
-const VDO_URL = "https://vdo.ninja/?view=M959c44";   // enlace de VDO.Ninja (baja latencia)
+const VDO_URL = "https://ok.ru/videoembed/17171047980675";   // enlace de VDO.Ninja (baja latencia)
 const DEFAULT_SOURCE = "twitch";     // "twitch" o "vdo"
 const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://). Si lo pones, se usa en lugar de Twitch.
 /* ========================= */
@@ -251,17 +281,20 @@ setSource(source === "vdo" ? "vdo" : "twitch");
 
 /* ---------- Chat (Twitch + Kick) ---------- */
 const PLATFORMS = {
+  twitch:{ url:"https://www.twitch.tv/embed/"+CHANNEL+"/chat?parent="+encodeURIComponent(PARENT)+"&darkpopout",
+           pop:"https://www.twitch.tv/popout/"+CHANNEL+"/chat?popout=", login:"https://www.twitch.tv/login", name:"Twitch" },
   kick:  { url:"https://kick.com/popout/"+KICK_CHANNEL+"/chat",
            pop:"https://kick.com/popout/"+KICK_CHANNEL+"/chat", name:"Kick" }
 };
-let active = "kick", hiddenAt = 0;
+let active = "twitch", hiddenAt = 0;
 
 Object.keys(PLATFORMS).forEach(k => {
   const p = PLATFORMS[k];
   p.pane = document.querySelector('.pane[data-p="'+k+'"]');
   p.frame = p.pane.querySelector("iframe");
   p.cover = p.pane.querySelector(".cover");
-  p.dot = document.createElement("span");
+  p.tab = document.querySelector('.tabs button[data-p="'+k+'"]');
+  p.dot = p.tab.querySelector(".dot");
   p.tries = 0; p.loaded = false; p.timer = null; p.started = false;
   p.frame.addEventListener("load", () => {
     if (p.frame.getAttribute("src") === "about:blank" || !p.frame.getAttribute("src")) return;
@@ -301,6 +334,19 @@ function loadChat(k, manual){
   updateHead();
 }
 
+function showTab(k){
+  active = k;
+  Object.keys(PLATFORMS).forEach(n => {
+    const p = PLATFORMS[n], on = n === k;
+    p.pane.classList.toggle("on", on);
+    p.tab.setAttribute("aria-selected", on);
+  });
+  if (!PLATFORMS[k].started) loadChat(k, true);
+  updateHead(); updateFoot();
+}
+function updateFoot(){ $("cfoot").hidden = active === "kick"; }
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.p)));
+
 $("btnRefresh").addEventListener("click", () => {
   const b = $("btnRefresh");
   b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
@@ -316,9 +362,83 @@ function openWin(url, name, w, h){
   win.focus(); return win;
 }
 function writeKick(){ openWin(PLATFORMS.kick.pop, "kick_chat", 440, 720); }
-$("btnWrite2").addEventListener("click", writeKick);
+/* Twitch: ventana de login y recarga del chat al cerrarla */
+$("btnLogin").addEventListener("click", () => {
+  const k = active, p = PLATFORMS[k];
+  const popup = openWin(p.login, "login_"+k, 480, 700);
+  if (!popup) return;
+  $("cState").textContent = "Esperando inicio de sesión…";
+  const iv = setInterval(() => { if (popup.closed) { clearInterval(iv); loadChat(k, true); } }, 600);
+});
+
+/* ---------- Escribir en Kick desde la página (API oficial de Kick + Worker) ---------- */
+const kOut = $("kOut"), kLogged = $("kLogged"), kMsg = $("kMsg"), kStat = $("kStat");
+function kAuthGet(){ try { return JSON.parse(localStorage.getItem("kick_auth") || "null"); } catch(e){ return null; } }
+function kAuthSet(a){ try { a ? localStorage.setItem("kick_auth", JSON.stringify(a)) : localStorage.removeItem("kick_auth"); } catch(e){} }
+function kStatus(msg, kind){ kStat.textContent = msg || ""; kStat.className = "kstat" + (kind ? " " + kind : ""); }
+function kRender(){
+  const on = !!KICK_API, a = on && kAuthGet();
+  kLogged.hidden = !a; kOut.hidden = !!a;
+  $("btnWrite2").textContent = on ? "Iniciar sesión con Kick" : "Escribir en Kick";
+  $("kOutText").textContent = on ? "Inicia sesión con tu cuenta de Kick para escribir en el chat desde aquí."
+                                 : "Para escribir en Kick inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.";
+}
+/* Al volver del login de Kick, el Worker devuelve la sesión en el # de la URL */
+(function(){
+  const m = location.hash.match(/kick_auth=([^&]+)/);
+  if (!m) return;
+  try {
+    const t = JSON.parse(atob(m[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (t.access_token) kAuthSet({ access_token: t.access_token, refresh_token: t.refresh_token, expires_at: Date.now() + (t.expires_in || 3600) * 1000 });
+  } catch(e){}
+  history.replaceState(null, "", location.pathname + location.search);
+})();
+async function kRefresh(){
+  const a = kAuthGet();
+  if (!a || !a.refresh_token) return false;
+  try {
+    const r = await fetch(KICK_API + "/refresh", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ refresh_token: a.refresh_token }) });
+    if (!r.ok) throw new Error("refresh");
+    const t = await r.json();
+    kAuthSet({ access_token: t.access_token, refresh_token: t.refresh_token || a.refresh_token, expires_at: Date.now() + (t.expires_in || 3600) * 1000 });
+    return true;
+  } catch(e){ kAuthSet(null); return false; }
+}
+async function kSend(){
+  const text = kMsg.value.trim();
+  if (!text) return;
+  const a = kAuthGet();
+  if (!a) { kRender(); return; }
+  if (a.expires_at - Date.now() < 60000 && !(await kRefresh())) { kRender(); kStatus("Tu sesión caducó. Inicia sesión de nuevo.", "err"); return; }
+  $("kSend").disabled = true; kStatus("Enviando…");
+  const post = () => fetch(KICK_API + "/send", { method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + kAuthGet().access_token }, body: JSON.stringify({ content: text }) });
+  try {
+    let r = await post();
+    if (r.status === 401 && await kRefresh()) r = await post();
+    if (r.ok) { kMsg.value = ""; kStatus("Enviado", "ok"); setTimeout(() => kStatus(""), 2000); }
+    else if (r.status === 401) { kAuthSet(null); kRender(); kStatus("Tu sesión caducó. Inicia sesión de nuevo.", "err"); }
+    else kStatus("Kick no aceptó el mensaje (código " + r.status + "). Puede que el chat tenga restricciones.", "err");
+  } catch(e){ kStatus("No hay conexión con el servidor del chat.", "err"); }
+  $("kSend").disabled = false; kMsg.focus();
+}
+async function kWho(){
+  const a = kAuthGet();
+  if (!a || !KICK_API) return;
+  try {
+    const r = await fetch(KICK_API + "/me", { headers:{ "Authorization":"Bearer " + a.access_token } });
+    if (r.ok) { const d = await r.json(); if (d.name) $("kUser").textContent = "Chateando como " + d.name; }
+  } catch(e){}
+}
+$("btnWrite2").addEventListener("click", () => {
+  if (KICK_API) location.href = KICK_API + "/login?return=" + encodeURIComponent(location.origin + location.pathname);
+  else writeKick();
+});
+$("kSend").addEventListener("click", kSend);
+kMsg.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); kSend(); } });
+$("kLogout").addEventListener("click", () => { kAuthSet(null); kStatus(""); kRender(); });
+kRender(); kWho();
 $("btnPop").addEventListener("click", () => {
-  writeKick();
+  if (active === "kick") writeKick(); else window.open(PLATFORMS[active].pop, "chat_"+active, "width=420,height=700");
 });
 
 /* Mostrar / ocultar chat */
@@ -340,7 +460,8 @@ document.addEventListener("visibilitychange", () => {
 let startHidden = false;
 try { startHidden = localStorage.getItem("chat") === "0"; } catch(e){}
 if (startHidden) $("main").classList.add("nochat");
-else loadChat("kick", true);
+else { loadChat("twitch", true); loadChat("kick", true); }
+updateFoot();
 </script>
 </body>
 </html>
