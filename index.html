@@ -84,6 +84,10 @@ main.nochat aside{display:none}
 .cfoot button.kbtn{background:#53fc18;color:#0b0e0a;text-decoration:none;font-size:13px;font-weight:700;padding:6px 14px;border-radius:8px}
 .cfoot button.kbtn:hover{filter:brightness(1.1)}
 .cfoot button[hidden]{display:none}
+.kwrite{position:absolute;left:0;right:0;bottom:0;height:128px;z-index:3;background:var(--panel2);border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px 14px;text-align:center;font-size:13px;line-height:1.4;color:var(--mute)}
+.kwrite b{color:var(--text)}
+.kwrite .kbtn{background:#53fc18;color:#0b0e0a;border:0;font-size:14px;font-weight:700;padding:9px 18px;border-radius:8px}
+.kwrite .kbtn:hover{filter:brightness(1.1)}
 .showchat{display:none}
 main.nochat .showchat{display:inline-flex}
 footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;text-align:center}
@@ -145,6 +149,7 @@ nav{margin-left:0;width:100%}
       <div class="pane" data-p="kick">
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
         <iframe title="Chat de Kick" allow="clipboard-write"></iframe>
+        <div class="kwrite"><span><b>Para escribir en Kick</b> inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.</span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
       </div>
     </div>
     <div class="cfoot">
@@ -342,6 +347,7 @@ function openWin(url, name, w, h){
 }
 function writeKick(){ openWin(PLATFORMS.kick.pop, "kick_chat", 440, 720); }
 $("btnWrite").addEventListener("click", writeKick);
+$("btnWrite2").addEventListener("click", writeKick);
 $("btnLogin").addEventListener("click", () => {
   const k = active, p = PLATFORMS[k];
   if (k === "kick") { writeKick(); return; }
@@ -352,7 +358,7 @@ $("btnLogin").addEventListener("click", () => {
 });
 function updateFoot(){
   const kick = active === "kick";
-  $("cfText").textContent = kick ? "Para escribir en Kick, inicia sesión en su ventana de chat:" : "¿No puedes escribir?";
+  $("cfText").textContent = kick ? "Deja abierta la ventana de Kick junto a la página para chatear:" : "¿No puedes escribir?";
   $("btnWrite").hidden = !kick;
   $("btnLogin").hidden = kick;
 }
