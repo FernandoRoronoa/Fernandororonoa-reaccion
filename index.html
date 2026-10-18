@@ -81,6 +81,9 @@ main.nochat aside{display:none}
 .spinner{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite}
 .cfoot{padding:8px 10px;border-top:1px solid var(--line);background:var(--panel2);font-size:12px;color:var(--mute);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cfoot button{background:none;border:0;color:var(--accent2);font-size:12px;font-weight:600;text-decoration:underline;padding:0}
+.cfoot button.kbtn{background:#53fc18;color:#0b0e0a;text-decoration:none;font-size:13px;font-weight:700;padding:6px 14px;border-radius:8px}
+.cfoot button.kbtn:hover{filter:brightness(1.1)}
+.cfoot button[hidden]{display:none}
 .showchat{display:none}
 main.nochat .showchat{display:inline-flex}
 footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;text-align:center}
@@ -145,8 +148,9 @@ nav{margin-left:0;width:100%}
       </div>
     </div>
     <div class="cfoot">
-      <span>¿No puedes escribir?</span>
+      <span id="cfText">¿No puedes escribir?</span>
       <button type="button" id="btnLogin">Iniciar sesión</button>
+      <button type="button" class="kbtn" id="btnWrite" hidden>Escribir en Kick</button>
     </div>
   </aside>
 </main>
@@ -165,7 +169,7 @@ const LINKS = {
   patreon: "https://www.patreon.com/cw/hoytereaccionoEsp/home",
   discord: "https://discord.com/invite/EcDz5z68H9"
 };
-const VDO_URL = "https://vdo.ninja/?view=M959c44";   // enlace de VDO.Ninja (baja latencia)
+const VDO_URL = "https://ok.ru/videoembed/17171047980675";   // enlace de VDO.Ninja (baja latencia)
 const DEFAULT_SOURCE = "twitch";     // "twitch" o "vdo"
 const HLS_URL = "";  // opcional: enlace .m3u8 de reproducción (NO el rtmp://). Si lo pones, se usa en lugar de Twitch.
 /* ========================= */
@@ -258,7 +262,7 @@ const PLATFORMS = {
   twitch:{ url:"https://www.twitch.tv/embed/"+CHANNEL+"/chat?parent="+encodeURIComponent(PARENT)+"&darkpopout",
            pop:"https://www.twitch.tv/popout/"+CHANNEL+"/chat?popout=", login:"https://www.twitch.tv/login", name:"Twitch" },
   kick:  { url:"https://kick.com/popout/"+KICK_CHANNEL+"/chat",
-           pop:"https://kick.com/popout/"+KICK_CHANNEL+"/chat", login:"https://kick.com/", name:"Kick" }
+           pop:"https://kick.com/popout/"+KICK_CHANNEL+"/chat", login:"https://kick.com/popout/"+KICK_CHANNEL+"/chat", name:"Kick" }
 };
 let active = "twitch", hiddenAt = 0;
 
@@ -316,7 +320,7 @@ function showTab(k){
     p.tab.setAttribute("aria-selected", on);
   });
   if (!PLATFORMS[k].started) loadChat(k, true);
-  updateHead();
+  updateHead(); updateFoot();
 }
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.p)));
 
@@ -326,18 +330,34 @@ $("btnRefresh").addEventListener("click", () => {
   loadChat(active, true);
 });
 
-/* Iniciar sesión: ventana de login y recarga del chat al cerrarla */
+/* Iniciar sesión.
+   Twitch: ventana de login y recarga del chat al cerrarla.
+   Kick: el navegador bloquea la sesión de Kick dentro de un iframe, así que se
+   escribe desde la ventana del chat de Kick (ahí el inicio de sesión sí se guarda). */
+function openWin(url, name, w, h){
+  const x = Math.max(0, (screen.width - w) / 2), y = Math.max(0, (screen.height - h) / 2);
+  const win = window.open(url, name, "width="+w+",height="+h+",left="+x+",top="+y);
+  if (!win) { window.open(url, "_blank", "noopener"); return null; }
+  win.focus(); return win;
+}
+function writeKick(){ openWin(PLATFORMS.kick.pop, "kick_chat", 440, 720); }
+$("btnWrite").addEventListener("click", writeKick);
 $("btnLogin").addEventListener("click", () => {
   const k = active, p = PLATFORMS[k];
-  const w = 480, h = 700;
-  const x = Math.max(0, (screen.width - w) / 2), y = Math.max(0, (screen.height - h) / 2);
-  const popup = window.open(p.login, "login_"+k, "width="+w+",height="+h+",left="+x+",top="+y);
-  if (!popup) { window.open(p.login, "_blank", "noopener"); return; }
+  if (k === "kick") { writeKick(); return; }
+  const popup = openWin(p.login, "login_"+k, 480, 700);
+  if (!popup) return;
   $("cState").textContent = "Esperando inicio de sesión…";
   const iv = setInterval(() => { if (popup.closed) { clearInterval(iv); loadChat(k, true); } }, 600);
 });
+function updateFoot(){
+  const kick = active === "kick";
+  $("cfText").textContent = kick ? "Para escribir en Kick, inicia sesión en su ventana de chat:" : "¿No puedes escribir?";
+  $("btnWrite").hidden = !kick;
+  $("btnLogin").hidden = kick;
+}
 $("btnPop").addEventListener("click", () => {
-  window.open(PLATFORMS[active].pop, "chat_"+active, "width=420,height=700");
+  if (active === "kick") writeKick(); else window.open(PLATFORMS[active].pop, "chat_"+active, "width=420,height=700");
 });
 
 /* Mostrar / ocultar chat */
@@ -360,6 +380,7 @@ let startHidden = false;
 try { startHidden = localStorage.getItem("chat") === "0"; } catch(e){}
 if (startHidden) $("main").classList.add("nochat");
 else { loadChat("twitch", true); loadChat("kick", true); }
+updateFoot();
 </script>
 </body>
 </html>
