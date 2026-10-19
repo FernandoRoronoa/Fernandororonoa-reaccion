@@ -86,7 +86,7 @@ main.nochat aside{display:none}
 .cfoot button[hidden],.cfoot[hidden]{display:none}
 .pane[data-p=kick]{--kh:128px;--kn:110px}
 /* --kh = alto de nuestra barra para escribir; --kn = alto de la caja de escribir propia de Kick (ajústalo si ves mensajes cortados o la caja de Kick asomando) */
-.pane[data-p=kick] iframe{top:0;bottom:calc(var(--kh) - var(--kn));height:auto}
+.pane[data-p=kick] iframe{display:none!important}   /* el chat de Kick de arriba (iframe) ya no se usa */
 .kchat{position:absolute;left:0;right:0;top:0;bottom:var(--kh);overflow-y:auto;background:#0e0d12;padding:8px 0;z-index:1;overscroll-behavior:contain}
 .kchat[hidden]{display:none}
 .kchat:empty::before{content:"Esperando mensajes…";display:block;text-align:center;color:var(--mute);font-size:13px;padding:24px 12px}
@@ -202,9 +202,9 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "fernandororonoa";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
-/* ID del chat de Kick (número). Con él la página muestra el chat de Kick ella misma, sin la caja de escribir duplicada de Kick.
-   Cómo sacarlo: abre https://kick.com/api/v2/channels/hoytereacciono1 en el navegador y copia el número que sale en "chatroom":{"id":NUMERO.
-   Vacío = se usa el chat normal de Kick (con su caja de escribir). */
+/* ID del chat de Kick (número). La página muestra los mensajes de Kick ella misma (sin la caja de escribir de Kick).
+   Si el chat de Kick no carga, pon aquí el número:
+   abre https://kick.com/api/v2/channels/hoytereacciono1 en el navegador y copia el número que sale en "chatroom":{"id":NUMERO. */
 const KICK_CHATROOM_ID = "";
 /* Emotes de Kick para el selector 😀: ["nombre", id]. El id es el número de la imagen del emote.
    Cómo sacarlo: en el chat de Kick, clic derecho sobre el emote → "Copiar dirección de la imagen".
@@ -224,8 +224,8 @@ const LINKS = {
   discord: "https://discord.com/invite/EcDz5z68H9"
 };
 const STREAM_URL = "https://vdo.ninja/?view=rvdavvdzj";   // reproductor de VDO.Ninja
-const STATUS_CHANNEL = "hoytereacciono";  // canal de Twitch que se vigila para saber si hay directo
-const OFFLINE_FORCE = "live";             // "auto" | "offline" | "live" (para probar el overlay)
+const STATUS_CHANNELS = [CHANNEL, "hoytereacciono"];  // canales de Twitch que se vigilan: si ALGUNO está en directo, se muestra el reproductor
+const OFFLINE_FORCE = "auto";             // "auto" | "offline" | "live" (para probar el overlay)
 /* ========================= */
 
 const $ = id => document.getElementById(id);
@@ -245,9 +245,14 @@ $("lnkDiscord").href = LINKS.discord;
 $("okplayer").src = STREAM_URL;
 $("liveTag").textContent = "Baja latencia";
 
-/* ---------- Overlay de offline (detecta si el canal de Twitch está en directo) ---------- */
+/* ---------- Overlay de offline (detecta si algún canal de Twitch está en directo) ---------- */
 (function(){
   const ok = $("okplayer"), ov = $("offline"), tag = $("liveTag");
+  /* Para probar sin tocar el código: abre la página con ?live (fuerza reproductor) o ?offline (fuerza overlay) */
+  const qs = new URLSearchParams(location.search);
+  const FORCE = qs.has("live") ? "live" : qs.has("offline") ? "offline" : OFFLINE_FORCE;
+  const chans = [...new Set(STATUS_CHANNELS.map(c => String(c).toLowerCase()))];
+  const st = {};           /* canal -> true (en directo) / false (offline) */
   let state = null;
   function setLive(live){
     if (state === live) return;
@@ -258,31 +263,33 @@ $("liveTag").textContent = "Baja latencia";
     tag.textContent = live ? "En directo" : "Offline";
     tag.classList.toggle("on", live);
   }
+  function update(){ const v = Object.values(st); if (v.length) setLive(v.some(Boolean)); }
 
-  if (OFFLINE_FORCE === "offline") return setLive(false);
-  if (OFFLINE_FORCE === "live") return setLive(true);
+  if (FORCE === "offline") return setLive(false);
+  if (FORCE === "live") return setLive(true);
 
-  /* Fuente 1: consulta pública del tiempo en directo del canal (se repite cada minuto) */
-  async function check(){
+  /* Fuente 1: consulta pública del tiempo en directo de cada canal (se repite cada minuto) */
+  async function check(c){
     try {
-      const r = await fetch("https://decapi.me/twitch/uptime/" + encodeURIComponent(STATUS_CHANNEL) + "?_=" + Date.now(), { cache:"no-store" });
+      const r = await fetch("https://decapi.me/twitch/uptime/" + encodeURIComponent(c) + "?_=" + Date.now(), { cache:"no-store" });
       const t = (await r.text()).trim();
       if (!r.ok || !t || /not be found|error|invalid|unavailable/i.test(t)) return;
-      setLive(!/offline/i.test(t));
+      st[c] = !/offline/i.test(t); update();
     } catch(e){}
   }
-  check(); setInterval(check, 60000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  const checkAll = () => chans.forEach(check);
+  checkAll(); setInterval(checkAll, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkAll(); });
 
-  /* Fuente 2: reproductor oculto de Twitch (avisa al instante cuando empieza o termina) */
+  /* Fuente 2: reproductor oculto de Twitch del primer canal (avisa al instante cuando empieza o termina) */
   const box = document.createElement("div"); box.id = "twStatus"; document.body.appendChild(box);
   const sc = document.createElement("script");
   sc.src = "https://embed.twitch.tv/embed/v1.js";
   sc.onload = () => {
     try {
-      const pl = new Twitch.Player("twStatus", { channel: STATUS_CHANNEL, parent: [PARENT], width: 400, height: 300, muted: true, autoplay: true });
-      pl.addEventListener(Twitch.Player.ONLINE,  () => { setLive(true); try { pl.pause(); } catch(e){} });
-      pl.addEventListener(Twitch.Player.OFFLINE, () => setLive(false));
+      const pl = new Twitch.Player("twStatus", { channel: chans[0], parent: [PARENT], width: 400, height: 300, muted: true, autoplay: true });
+      pl.addEventListener(Twitch.Player.ONLINE,  () => { st[chans[0]] = true;  update(); try { pl.pause(); } catch(e){} });
+      pl.addEventListener(Twitch.Player.OFFLINE, () => { st[chans[0]] = false; update(); });
     } catch(e){}
   };
   document.head.appendChild(sc);
@@ -349,7 +356,12 @@ function loadChat(k, manual){
 /* ---------- Chat de Kick propio (sin la caja de escribir de Kick) ---------- */
 let kws = null, kRoom = "";
 function closeKickWs(){ const w = kws; kws = null; if (w) { try { w.close(); } catch(e){} } }
-function kickFallback(p){ closeKickWs(); p.useFrame = true; loadChat("kick", true); }
+function kickFallback(p){
+  closeKickWs(); clearTimeout(p.timer); p.loaded = false;
+  setDot(p, "err");
+  cover(p, "No se pudo cargar el chat de Kick. Inténtalo de nuevo en unos segundos.", true);
+  updateHead();
+}
 async function kickRoomId(){
   if (KICK_CHATROOM_ID) return String(KICK_CHATROOM_ID).trim();
   if (kRoom) return kRoom;
