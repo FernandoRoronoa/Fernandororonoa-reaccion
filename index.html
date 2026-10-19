@@ -192,10 +192,9 @@ const KICK_CHANNEL = "hoytereacciono1"; // Kick
 const KICK_EMOTES = [
   ["ThisIsFine", 37236],
   ["peepoShy", 39275],
-  ["WeirdChamp", 37240]
+  ["WeirdChamp", 37240],
   ["emojiBlowKiss", 1579036],
   ["jessybabybaile", 4418407],
-  ["ThisIsFine", 37236],
   ["emojiWink", 1730831],
   ["SenpaiWhoo", 5756676],
   ["catKISS", 4147900],
@@ -522,7 +521,7 @@ kRender(); kWho();
 /* ---------- Selector de emotes de Kick ---------- */
 (function(){
   const box = $("kEmotes"), btn = $("kEmoBtn");
-  KICK_EMOTES.forEach(([name, id]) => {
+  KICK_EMOTES.filter(Array.isArray).forEach(([name, id]) => {
     const b = document.createElement("button");
     b.type = "button"; b.title = name;
     const img = document.createElement("img");
