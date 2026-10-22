@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>elarsam15 - Directo</title>
+<title>HoyTeReacciono - Directo</title>
 <style>
 :root{--bg:#0e0d12;--panel:#17151e;--panel2:#1f1c29;--line:#2c2839;--text:#f1eef8;--mute:#9a94ad;--accent:#9146ff;--accent2:#b58bff;--ok:#3ddc97;--bad:#ff6b6b}
 *{box-sizing:border-box;margin:0}
@@ -105,9 +105,6 @@ main.nochat aside{display:none}
 #kEmotes button{background:none;border:0;padding:4px;border-radius:6px;display:grid;place-items:center}
 #kEmotes button:hover{background:var(--panel)}
 #kEmotes img{width:32px;height:32px;object-fit:contain}
-.viewers{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:5px 10px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--text);line-height:1}
-.viewers svg{width:14px;height:14px;fill:#53fc18;flex:none}
-.viewers.off{color:var(--mute)}
 .chatToggle{position:absolute;top:10px;right:10px;z-index:5;width:34px;height:34px;border-radius:8px;border:0;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
 .chatToggle:hover{opacity:1;background:rgba(0,0,0,.7)}
 .chatToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -130,7 +127,7 @@ nav{margin-left:0;width:100%}
 <body>
 
 <header>
-  <a class="brand" href="/" aria-label="elarsam15"><span class="logo">E</span>elarsam15<span class="live" id="liveTag">Comprobando…</span></a>
+  <a class="brand" href="/" aria-label="HoyTeReacciono"><span class="logo">H</span>HoyTeReacciono<span class="live" id="liveTag">Comprobando…</span></a>
   
 </header>
 
@@ -143,12 +140,12 @@ nav{margin-left:0;width:100%}
       </button>
     </div>
     <div class="profile">
-      <img class="avatar" id="avatar" alt="Foto de perfil de elarsam15" src="https://static-cdn.jtvnw.net/jtv_user_pictures/a7893047-0a64-43ae-a812-9cccc606d7f6-profile_image-300x300.png" onerror="this.onerror=null;this.removeAttribute('src')">
-      <div class="pinfo"><h1>elarsam15 <a class="subbtn" id="lnkSub" href="https://www.twitch.tv/elarsam15" target="_blank" rel="noopener">Suscribirse</a>
-        <span class="viewers off" id="viewers" title="Espectadores en Kick" aria-label="Espectadores en Kick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2h6v6h3V5h3V2h6v6h-3v3h-3v2h3v3h3v6h-6v-3h-3v-3H9v6H3z"/></svg><span id="vCount">–</span></span></h1><p id="followers"></p></div>
+      <img class="avatar" id="avatar" alt="Foto de perfil de HoyTeReacciono" src="https://static-cdn.jtvnw.net/jtv_user_pictures/9cbb64ee-d1f1-456a-8075-99cd4abe4db1-profile_image-300x300.png" onerror="this.onerror=null;this.removeAttribute('src')">
+      <div class="pinfo"><h1>HoyTeReacciono <a class="subbtn" id="lnkSub" href="https://www.twitch.tv/hoytereacciono" target="_blank" rel="noopener">Suscribirse</a>
+        </h1><p id="followers"></p></div>
     </div>
     <div class="socials" aria-label="Redes">
-      <a class="soc twitch" href="https://www.twitch.tv/elarsam15" target="_blank" rel="noopener" id="lnkTwitch">Twitch</a>
+      <a class="soc twitch" href="https://www.twitch.tv/hoytereacciono" target="_blank" rel="noopener" id="lnkTwitch">Twitch</a>
       <a class="soc kick" href="https://kick.com/elarsam97" target="_blank" rel="noopener" id="lnkKick">Kick</a>
       <a class="soc tiktok" href="#" target="_blank" rel="noopener" id="lnkTiktok">TikTok</a>
       <a class="soc patreon" href="#" target="_blank" rel="noopener" id="lnkPatreon">Patreon</a>
@@ -196,11 +193,11 @@ nav{margin-left:0;width:100%}
   </div>
 </main>
 
-<footer>© elarsam15</footer>
+<footer>© HoyTeReacciono</footer>
 
 <script>
 /* ===== CONFIGURACIÓN ===== */
-const CHANNEL = "elarsam15";      // Twitch
+const CHANNEL = "hoytereacciono";      // Twitch
 const KICK_CHANNEL = "elarsam97"; // Kick
 /* Emotes de Kick para el selector 😀: ["nombre", id]. El id es el número de la imagen del emote.
    Cómo sacarlo: en el chat de Kick, clic derecho sobre el emote → "Copiar dirección de la imagen".
@@ -347,13 +344,13 @@ const KICK_EMOTES = [
   ["emojiYum", 1730840]
   /* añade aquí los de tu canal, por ejemplo: ["MiEmote", 1234567], */
 ];
-const KICK_API = "https://kickelar.bazingatbbt2.workers.dev";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
+const KICK_API = "https://kickchatelar.bazingattbt2.workers.dev";  // URL de tu Worker para escribir en Kick desde la página, ej. "https://kick-chat.tuusuario.workers.dev" (ver LEEME-Kick-Chat.md). Vacío = se usa la ventana de Kick.
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
 const LINKS = {
-  tiktok:  "https://www.tiktok.com/@elarsam",
-  patreon: "https://www.patreon.com/cw/ElarSam",
-  discord: "https://discord.com/invite/9RCZhxwUwd"
+  tiktok:  "https://www.tiktok.com/@hoytereacciono_oficial",
+  patreon: "https://www.patreon.com/cw/hoytereaccionoEsp/home",
+  discord: "https://discord.com/invite/EcDz5z68H9"
 };
 const STREAM_URL = "https://vdo.ninja/?view=rvdavvdzj"; // reproductor de VDO.Ninja.
 /* ========================= */
@@ -580,41 +577,6 @@ function syncToggle(){
   b.setAttribute("aria-expanded", !hidden);
 }
 new MutationObserver(syncToggle).observe($("main"), { attributes:true, attributeFilter:["class"] });
-
-/* ---------- Espectadores de Kick ---------- */
-/* Se prueba primero tu Worker (KICK_API + "/viewers"), luego la API pública de Kick directa y, por último, a través de un proxy CORS. */
-const VIEWERS_REFRESH = 30000; // ms
-function viewersFrom(d){
-  if (!d) return null;
-  const ls = d.data !== undefined ? d.data : d.livestream;
-  if (ls && typeof ls.viewer_count === "number") return ls.viewer_count;
-  if (typeof d.viewers === "number") return d.viewers;
-  if (typeof d.viewer_count === "number") return d.viewer_count;
-  return ls === null || d.data === null ? 0 : null;
-}
-async function fetchViewers(){
-  const api = "https://kick.com/api/v2/channels/" + KICK_CHANNEL + "/livestream";
-  const urls = [];
-  if (KICK_API) urls.push(KICK_API + "/viewers");
-  urls.push(api, "https://api.allorigins.win/raw?url=" + encodeURIComponent(api));
-  for (const u of urls){
-    try {
-      const r = await fetch(u, { cache:"no-store" });
-      if (!r.ok) continue;
-      const n = viewersFrom(await r.json());
-      if (n !== null) return n;
-    } catch(e){}
-  }
-  return null;
-}
-async function updateViewers(){
-  const n = await fetchViewers(), box = $("viewers");
-  if (n === null) { $("vCount").textContent = "–"; box.classList.add("off"); return; }
-  $("vCount").textContent = n.toLocaleString("es");
-  box.classList.toggle("off", n === 0);
-}
-updateViewers();
-setInterval(() => { if (!document.hidden) updateViewers(); }, VIEWERS_REFRESH);
 
 /* Recuperación automática */
 window.addEventListener("online", () => Object.keys(PLATFORMS).forEach(k => PLATFORMS[k].started && loadChat(k, true)));
