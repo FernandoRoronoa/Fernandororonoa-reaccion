@@ -90,6 +90,13 @@ main.nochat aside{display:none}
 .kwrite b{color:var(--text)}
 .kwrite>div{width:100%}
 .kwrite #kOut{display:flex;flex-direction:column;align-items:center;gap:8px}
+.kwrite .khead{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;color:var(--text)}
+.kwrite .klink{background:none;border:0;color:var(--accent2);font-size:12px;font-weight:600;text-decoration:underline;padding:0}
+.kwrite .krow{display:flex;gap:8px}
+.kwrite input{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit;font-size:14px}
+.kwrite input:focus{outline:none;border-color:#53fc18}
+.kwrite .kstat{min-height:16px;font-size:12px;margin-top:6px;text-align:left}
+.kwrite .kstat.err{color:var(--bad)}.kwrite .kstat.ok{color:var(--ok)}
 .kwrite [hidden]{display:none!important}
 .kwrite .kbtn{background:#53fc18;color:#0b0e0a;border:0;font-size:14px;font-weight:700;padding:9px 18px;border-radius:8px}
 .kwrite .kbtn:hover{filter:brightness(1.1)}
@@ -139,7 +146,7 @@ nav{margin-left:0;width:100%}
     </div>
     <div class="socials" aria-label="Redes">
       <a class="soc twitch" href="https://www.twitch.tv/hoytereacciono" target="_blank" rel="noopener" id="lnkTwitch">Twitch</a>
-      <a class="soc kick" href="https://kick.com/hoytereacciono1" target="_blank" rel="noopener" id="lnkKick">Kick</a>
+      <a class="soc kick" href="https://kick.com/fernandororonoa1" target="_blank" rel="noopener" id="lnkKick">Kick</a>
       <a class="soc tiktok" href="#" target="_blank" rel="noopener" id="lnkTiktok">TikTok</a>
       <a class="soc patreon" href="#" target="_blank" rel="noopener" id="lnkPatreon">Patreon</a>
       <a class="soc discord" href="#" target="_blank" rel="noopener" id="lnkDiscord">Discord</a>
@@ -168,7 +175,12 @@ nav{margin-left:0;width:100%}
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
         <iframe title="Chat de Kick" allow="clipboard-write"></iframe>
         <div class="kwrite">
+          <div id="kLogged" hidden>
+            <div class="khead"><span id="kUser">Chateando en Kick</span><button type="button" class="klink" id="kLogout">Salir</button></div>
+            <div class="krow"><input id="kMsg" type="text" maxlength="500" placeholder="Enviar un mensaje" autocomplete="off" aria-label="Mensaje para el chat de Kick"><button type="button" class="kbtn" id="kSend">Chatear</button></div>
+          </div>
           <div id="kOut"><span id="kOutText"></span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
+          <div class="kstat" id="kStat" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -186,7 +198,8 @@ nav{margin-left:0;width:100%}
 <script>
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "hoytereacciono";      // Twitch
-const KICK_CHANNEL = "hoytereacciono1"; // Kick
+const KICK_API = "";  // URL de tu Worker, ej. "https://kick-chat.tuusuario.workers.dev". Vacío = se usa la ventana de Kick.
+const KICK_CHANNEL = "fernandororonoa1"; // Kick
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
 const LINKS = {
@@ -315,9 +328,72 @@ $("btnLogin").addEventListener("click", () => {
   const iv = setInterval(() => { if (popup.closed) { clearInterval(iv); loadChat(k, true); } }, 600);
 });
 
-/* ---------- Escribir en Kick: abre la ventana del chat de Kick ---------- */
-$("kOutText").textContent = "Para escribir en Kick inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.";
-$("btnWrite2").addEventListener("click", writeKick);
+/* ---------- Escribir en Kick desde la página (API oficial de Kick + Worker) ---------- */
+const kOut = $("kOut"), kLogged = $("kLogged"), kMsg = $("kMsg"), kStat = $("kStat");
+function kAuthGet(){ try { return JSON.parse(localStorage.getItem("kick_auth") || "null"); } catch(e){ return null; } }
+function kAuthSet(a){ try { a ? localStorage.setItem("kick_auth", JSON.stringify(a)) : localStorage.removeItem("kick_auth"); } catch(e){} }
+function kStatus(msg, kind){ kStat.textContent = msg || ""; kStat.className = "kstat" + (kind ? " " + kind : ""); }
+function kRender(){
+  const on = !!KICK_API, a = on && kAuthGet();
+  kLogged.hidden = !a; kOut.hidden = !!a;
+  $("btnWrite2").textContent = on ? "Iniciar sesión con Kick" : "Escribir en Kick";
+  $("kOutText").textContent = on ? "Inicia sesión con tu cuenta de Kick para escribir en el chat desde aquí."
+                                 : "Para escribir en Kick inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.";
+}
+/* Al volver del login de Kick, el Worker devuelve la sesión en el # de la URL */
+(function(){
+  const m = location.hash.match(/kick_auth=([^&]+)/);
+  if (!m) return;
+  try {
+    const t = JSON.parse(atob(m[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (t.access_token) kAuthSet({ access_token: t.access_token, refresh_token: t.refresh_token, expires_at: Date.now() + (t.expires_in || 3600) * 1000 });
+  } catch(e){}
+  history.replaceState(null, "", location.pathname + location.search);
+})();
+async function kRefresh(){
+  const a = kAuthGet();
+  if (!a || !a.refresh_token) return false;
+  try {
+    const r = await fetch(KICK_API + "/refresh", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ refresh_token: a.refresh_token }) });
+    if (!r.ok) throw new Error("refresh");
+    const t = await r.json();
+    kAuthSet({ access_token: t.access_token, refresh_token: t.refresh_token || a.refresh_token, expires_at: Date.now() + (t.expires_in || 3600) * 1000 });
+    return true;
+  } catch(e){ kAuthSet(null); return false; }
+}
+async function kSend(){
+  const text = kMsg.value.trim();
+  if (!text) return;
+  const a = kAuthGet();
+  if (!a) { kRender(); return; }
+  if (a.expires_at - Date.now() < 60000 && !(await kRefresh())) { kRender(); kStatus("Tu sesión caducó. Inicia sesión de nuevo.", "err"); return; }
+  $("kSend").disabled = true; kStatus("Enviando…");
+  const post = () => fetch(KICK_API + "/send", { method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + kAuthGet().access_token }, body: JSON.stringify({ content: text }) });
+  try {
+    let r = await post();
+    if (r.status === 401 && await kRefresh()) r = await post();
+    if (r.ok) { kMsg.value = ""; kStatus("Enviado", "ok"); setTimeout(() => kStatus(""), 2000); }
+    else if (r.status === 401) { kAuthSet(null); kRender(); kStatus("Tu sesión caducó. Inicia sesión de nuevo.", "err"); }
+    else kStatus("Kick no aceptó el mensaje (código " + r.status + "). Puede que el chat tenga restricciones.", "err");
+  } catch(e){ kStatus("No hay conexión con el servidor del chat.", "err"); }
+  $("kSend").disabled = false; kMsg.focus();
+}
+async function kWho(){
+  const a = kAuthGet();
+  if (!a || !KICK_API) return;
+  try {
+    const r = await fetch(KICK_API + "/me", { headers:{ "Authorization":"Bearer " + a.access_token } });
+    if (r.ok) { const d = await r.json(); if (d.name) $("kUser").textContent = "Chateando como " + d.name; }
+  } catch(e){}
+}
+$("btnWrite2").addEventListener("click", () => {
+  if (KICK_API) location.href = KICK_API + "/login?return=" + encodeURIComponent(location.origin + location.pathname);
+  else writeKick();
+});
+$("kSend").addEventListener("click", kSend);
+kMsg.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); kSend(); } });
+$("kLogout").addEventListener("click", () => { kAuthSet(null); kStatus(""); kRender(); });
+kRender(); kWho();
 
 function writeTwitch(){ openWin(PLATFORMS.twitch.pop, "chat_twitch", 420, 700); }
 $("btnTwPop").addEventListener("click", writeTwitch);
