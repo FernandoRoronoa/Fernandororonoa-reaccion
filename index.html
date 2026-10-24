@@ -106,7 +106,13 @@ main.nochat .chatToggle .a-show{display:block}
 .tw [hidden],.tw[hidden]{display:none!important}
 #twLog{flex:1;overflow-y:auto;padding:8px 10px;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
 #twLog p{margin:0 0 4px}
-#twLog img{height:24px;vertical-align:middle;margin:-2px 1px}
+#twLog p{padding:3px 6px;border-radius:6px}
+#twLog p:hover{background:rgba(255,255,255,.05)}
+#twLog img{vertical-align:middle}
+#twLog img.bd{height:18px;width:18px;margin:-2px 3px 0 0;border-radius:3px;display:inline-block}
+#twLog img.em{height:28px;width:auto;margin:-6px 2px}
+#twLog a{color:var(--accent2);text-decoration:underline}
+#twLog p b{font-weight:700}
 .twbar{border-top:1px solid var(--line);background:var(--panel2);padding:8px;display:flex;gap:8px;align-items:center}
 .twbar span{flex:1;font-size:13px;color:var(--mute)}
 .twbar input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px;font:inherit}
@@ -302,7 +308,7 @@ function showTab(k){
   updateHead(); updateFoot();
   if (CUSTOM && k === "twitch") $("twLog").scrollTop = $("twLog").scrollHeight;
 }
-function updateFoot(){ $("btnPop").hidden = active === "twitch"; }
+function updateFoot(){ $("btnPop").hidden = false; }
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.p)));
 
 $("btnRefresh").addEventListener("click", () => {
@@ -372,7 +378,7 @@ $("twForm").addEventListener("submit", e => {
   const i = $("twInput"), t = i.value.trim();
   if (!t || !TW.ws || TW.ws.readyState !== 1) return;
   TW.ws.send("PRIVMSG #" + CHANNEL + " :" + t);
-  twMsg(TW.login, null, t, "");                     // Twitch no devuelve tus propios mensajes
+  twMsg((TW.me && TW.me["display-name"]) || TW.login, TW.me && TW.me.color, t, "", TW.me && TW.me.badges); // Twitch no devuelve tus propios mensajes
   i.value = "";
 });
 
@@ -412,7 +418,15 @@ function twLine(l){
   else if (cmd === "NOTICE" && /authentication failed/i.test(rest)) { setS("tw_token", null); TW.token = TW.login = null; twUI(); connectTw(); }
   else if (cmd === "NOTICE") twSys(rest.replace(/^\S+ :/, ""));
   else if (cmd === "RECONNECT") TW.ws.close();
-  else if (cmd === "PRIVMSG") twMsg(tags["display-name"] || m[1].split("!")[0], tags.color, rest.slice(rest.indexOf(" :") + 2), tags.emotes);
+  else if (cmd === "ROOMSTATE") { if (tags["room-id"] && TW.roomId !== tags["room-id"]) { TW.roomId = tags["room-id"]; loadExtras(TW.roomId); } }
+  else if (cmd === "USERSTATE" || cmd === "GLOBALUSERSTATE") {
+    if (cmd === "USERSTATE") TW.me = tags;
+    if (tags["emote-sets"]) loadSets(tags["emote-sets"].split(","));
+  }
+  else if (cmd === "PRIVMSG") {
+    if (!TW.roomId && tags["room-id"]) { TW.roomId = tags["room-id"]; loadExtras(TW.roomId); }
+    twMsg(tags["display-name"] || m[1].split("!")[0], tags.color, rest.slice(rest.indexOf(" :") + 2), tags.emotes, tags.badges);
+  }
 }
 function twPush(el){
   const log = $("twLog"), atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
@@ -423,7 +437,84 @@ function twPush(el){
 function twSys(text){
   const p = document.createElement("p"); p.style.cssText = "color:var(--mute);font-style:italic"; p.textContent = text; twPush(p);
 }
-function twMsg(name, color, text, emotes){
+/* ---------- Insignias (mod, VIP, sub...) y emotes extra (7TV, BTTV, FFZ, emotes de Twitch por nombre) ---------- */
+TW.badges = {}; TW.emo = {}; TW.roomId = null; TW.me = null; TW.setsDone = {};
+const _bd = (bg, glyph) => "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect width="18" height="18" rx="3" fill="' + bg + '"/>' + glyph + '</svg>');
+const BADGE_FALLBACK = {
+  broadcaster: _bd("#e91916", '<path d="M3 6h8v6H3zM12 8l4-2v6l-4-2z" fill="#fff"/>'),
+  moderator:   _bd("#00ad03", '<path d="M4 13l7-7 1.5 1.5-7 7zM11 4.5l3-.5-.5 3z" fill="#fff"/>'),
+  vip:         _bd("#e005b9", '<path d="M9 3l6 6-6 6-6-6z" fill="#fff"/>'),
+  subscriber:  _bd("#8205b4", '<path d="M9 3l1.8 3.7 4.1.6-3 2.9.7 4.1L9 12.3l-3.6 2 .7-4.1-3-2.9 4.1-.6z" fill="#fff"/>'),
+  founder:     _bd("#8205b4", '<path d="M9 3l1.8 3.7 4.1.6-3 2.9.7 4.1L9 12.3l-3.6 2 .7-4.1-3-2.9 4.1-.6z" fill="#fff"/>'),
+  staff:       _bd("#6441a5", '<path d="M5 5h8v8H5z" fill="#fff"/>'),
+  partner:     _bd("#9146ff", '<path d="M5 9l3 3 5-6" stroke="#fff" stroke-width="2" fill="none"/>'),
+  premium:     _bd("#00a7f5", '<path d="M3 13V6l3 3 3-4 3 4 3-3v7z" fill="#fff"/>')
+};
+const BADGE_NAME = { broadcaster:"Streamer", moderator:"Moderador", vip:"VIP", subscriber:"Suscriptor", founder:"Fundador", staff:"Staff", partner:"Verificado", premium:"Prime Gaming" };
+
+async function getJ(url, headers){
+  try { const r = await fetch(url, headers ? { headers } : undefined); return r.ok ? await r.json() : null; } catch(e){ return null; }
+}
+function addBadgeSets(list){
+  (list || []).forEach(b => {
+    const id = b.set_id || b.setID;
+    (b.versions || []).forEach(v => { const u = v.image_url_2x || v.image_url_1x; if (id && u) TW.badges[id + "/" + v.id] = u; });
+  });
+}
+async function loadBadges(roomId){
+  if (TW.token) {
+    const H = { Authorization: "Bearer " + TW.token, "Client-Id": TWITCH_CLIENT_ID };
+    const g = await getJ("https://api.twitch.tv/helix/chat/badges/global", H);
+    if (g) addBadgeSets(g.data);
+    const c = await getJ("https://api.twitch.tv/helix/chat/badges?broadcaster_id=" + roomId, H);
+    if (c) addBadgeSets(c.data);
+    if (g || c) return;
+  }
+  addBadgeSets(await getJ("https://api.ivr.fi/v2/twitch/badges/global"));
+  addBadgeSets(await getJ("https://api.ivr.fi/v2/twitch/badges/channel?login=" + CHANNEL));
+}
+function addEmo(name, url){ if (name && url) TW.emo[name] = url; }
+async function loadExtras(roomId){
+  loadBadges(roomId);
+  // 7TV
+  const lst = d => ((d && (d.emotes || (d.emote_set && d.emote_set.emotes))) || []);
+  const seven = e => { const h = e.data && e.data.host; if (h) addEmo(e.name, "https:" + h.url + "/2x.webp"); };
+  lst(await getJ("https://7tv.io/v3/emote-sets/global")).forEach(seven);
+  lst(await getJ("https://7tv.io/v3/users/twitch/" + roomId)).forEach(seven);
+  // BetterTTV
+  const bt = e => addEmo(e.code, "https://cdn.betterttv.net/emote/" + e.id + "/2x.webp");
+  (await getJ("https://api.betterttv.net/3/cached/emotes/global") || []).forEach(bt);
+  const bc = await getJ("https://api.betterttv.net/3/cached/users/twitch/" + roomId);
+  if (bc) [].concat(bc.channelEmotes || [], bc.sharedEmotes || []).forEach(bt);
+  // FrankerFaceZ
+  const ff = d => { if (d && d.sets) Object.values(d.sets).forEach(st => (st.emoticons || []).forEach(e => { const u = e.urls && (e.urls["2"] || e.urls["1"]); if (u) addEmo(e.name, "https:" + u.replace(/^https?:/, "")); })); };
+  ff(await getJ("https://api.frankerfacez.com/v1/set/global"));
+  ff(await getJ("https://api.frankerfacez.com/v1/room/id/" + roomId));
+}
+async function loadSets(ids){          // emotes de Twitch (globales + tus subs) para reconocerlos por nombre en tus mensajes
+  if (!TW.token) return;
+  ids = ids.filter(x => x && !TW.setsDone[x]); ids.forEach(x => TW.setsDone[x] = 1);
+  const H = { Authorization: "Bearer " + TW.token, "Client-Id": TWITCH_CLIENT_ID };
+  for (let i = 0; i < ids.length; i += 25) {
+    const q = ids.slice(i, i + 25).map(x => "emote_set_id=" + encodeURIComponent(x)).join("&");
+    const d = await getJ("https://api.twitch.tv/helix/chat/emotes/set?" + q, H);
+    if (d && d.data) d.data.forEach(e => { if (!TW.emo[e.name]) addEmo(e.name, "https://static-cdn.jtvnw.net/emoticons/v2/" + encodeURIComponent(e.id) + "/default/dark/2.0"); });
+  }
+}
+function mkEmote(src, alt){
+  const img = new Image(); img.className = "em"; img.alt = alt; img.title = alt; img.loading = "lazy"; img.src = src; return img;
+}
+function addText(p, str){              // texto con enlaces y emotes de terceros
+  let buf = "";
+  const flush = () => { if (buf) { p.append(buf); buf = ""; } };
+  str.split(/(\s+)/).forEach(tok => {
+    if (/^https?:\/\/\S+$/i.test(tok)) { flush(); const a = document.createElement("a"); a.href = tok; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = tok; p.append(a); }
+    else if (Object.prototype.hasOwnProperty.call(TW.emo, tok)) { flush(); p.append(mkEmote(TW.emo[tok], tok)); }
+    else buf += tok;
+  });
+  flush();
+}
+function twMsg(name, color, text, emotes, badges){
   const act = text.startsWith("\x01ACTION "), chars = Array.from(text), end = act ? chars.length - 1 : chars.length;
   const ranges = [];
   (emotes || "").split("/").forEach(e => {
@@ -433,18 +524,26 @@ function twMsg(name, color, text, emotes){
   });
   ranges.sort((x, y) => x.a - y.a);
   const p = document.createElement("p"), n = document.createElement("b");
+  (badges || "").split(",").forEach(b => {                       // insignias
+    if (!b) return;
+    const set = b.split("/")[0], url = TW.badges[b] || BADGE_FALLBACK[set];
+    if (!url) return;
+    const img = new Image(); img.className = "bd"; img.src = url; img.alt = set;
+    img.title = BADGE_NAME[set] || set;
+    img.onerror = () => { if (BADGE_FALLBACK[set] && img.src !== BADGE_FALLBACK[set]) img.src = BADGE_FALLBACK[set]; else img.remove(); };
+    p.append(img);
+  });
   n.textContent = name; n.style.color = /^#[0-9a-f]{6}$/i.test(color || "") ? color : "var(--accent2)";
   p.append(n, ": ");
   if (act) p.style.fontStyle = "italic";
   let i = act ? 8 : 0;
   ranges.forEach(r => {
     if (r.b >= end || r.a < i) return;
-    if (r.a > i) p.append(chars.slice(i, r.a).join(""));
-    const img = new Image(); img.alt = chars.slice(r.a, r.b + 1).join(""); img.loading = "lazy";
-    img.src = "https://static-cdn.jtvnw.net/emoticons/v2/" + encodeURIComponent(r.id) + "/default/dark/1.0";
-    p.append(img); i = r.b + 1;
+    if (r.a > i) addText(p, chars.slice(i, r.a).join(""));
+    p.append(mkEmote("https://static-cdn.jtvnw.net/emoticons/v2/" + encodeURIComponent(r.id) + "/default/dark/2.0", chars.slice(r.a, r.b + 1).join("")));
+    i = r.b + 1;
   });
-  if (i < end) p.append(chars.slice(i, end).join(""));
+  if (i < end) addText(p, chars.slice(i, end).join(""));
   twPush(p);
 }
 
@@ -452,7 +551,10 @@ function twMsg(name, color, text, emotes){
 $("kOutText").textContent = "Para escribir en Kick inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.";
 $("btnWrite2").addEventListener("click", writeKick);
 
-$("btnPop").addEventListener("click", () => { if (active === "kick") writeKick(); });
+$("btnPop").addEventListener("click", () => {
+  if (active === "kick") writeKick();
+  else openWin(PLATFORMS.twitch.pop + "&darkpopout", "twitch_chat", 440, 720);
+});
 
 /* Mostrar / ocultar chat */
 function setChat(show){
