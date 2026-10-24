@@ -101,6 +101,15 @@ main.nochat .chatToggle .a-hide{display:none}
 main.nochat .chatToggle .a-show{display:block}
 .twitchbox{position:relative;width:100%;height:300px;flex:none;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .twitchbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ib[hidden]{display:none}
+.tw{position:absolute;inset:0;display:flex;flex-direction:column;background:#18181b}
+.tw [hidden],.tw[hidden]{display:none!important}
+#twLog{flex:1;overflow-y:auto;padding:8px 10px;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+#twLog p{margin:0 0 4px}
+#twLog img{height:24px;vertical-align:middle;margin:-2px 1px}
+.twbar{border-top:1px solid var(--line);background:var(--panel2);padding:8px;display:flex;gap:8px;align-items:center}
+.twbar span{flex:1;font-size:13px;color:var(--mute)}
+.twbar input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px;font:inherit}
 footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--mute);font-size:13px;text-align:center}
 @media(min-width:961px){
 .twitchbox{height:clamp(160px,26vh,300px)}
@@ -163,6 +172,11 @@ nav{margin-left:0;width:100%}
       <div class="pane on" data-p="twitch">
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
         <iframe title="Chat de Twitch" allow="clipboard-write"></iframe>
+        <div class="tw" id="twChat" hidden>
+          <div id="twLog" aria-live="polite"></div>
+          <div class="twbar" id="twOut"><span>Para escribir, inicia sesión.</span><button type="button" class="btn primary" id="twLogin">Iniciar sesión con Twitch</button></div>
+          <form class="twbar" id="twForm" hidden><input id="twInput" maxlength="500" autocomplete="off" aria-label="Mensaje"><button class="btn primary" type="submit">Enviar</button><button class="btn" type="button" id="twLogout">Salir</button></form>
+        </div>
       </div>
       <div class="pane" data-p="kick">
         <div class="cover"><div class="spinner"></div><div class="cmsg">Conectando con el chat…</div><button class="btn primary cretry" type="button" hidden>Reintentar</button></div>
@@ -171,11 +185,6 @@ nav{margin-left:0;width:100%}
           <div id="kOut"><span id="kOutText"></span><button type="button" class="kbtn" id="btnWrite2">Escribir en Kick</button></div>
         </div>
       </div>
-    </div>
-    <div class="cfoot" id="cfoot">
-      <span>¿No puedes escribir?</span>
-      <button type="button" class="pbtn" id="btnTwPop">Abrir chat en ventana</button>
-      <button type="button" id="btnLogin">Iniciar sesión</button>
     </div>
   </aside>
   </div>
@@ -187,6 +196,9 @@ nav{margin-left:0;width:100%}
 /* ===== CONFIGURACIÓN ===== */
 const CHANNEL = "hoytereacciono";      // Twitch
 const KICK_CHANNEL = "hoytereacciono1"; // Kick
+const TWITCH_CLIENT_ID = "";   // <-- pega aquí el Client ID de tu app en dev.twitch.tv/console (ver instrucciones)
+const REDIRECT_URI = "https://hoytereacciono-o6ci.vercel.app/"; // debe ser idéntica a la "OAuth Redirect URL" de la app
+const CUSTOM = !!TWITCH_CLIENT_ID;
 const FOLLOWERS = "Directos en Twitch y Kick";   // texto bajo el nombre (ej. "1.2K seguidores")
 const AVATAR_URL = "";               // opcional: otra foto (por defecto usa la de Twitch)
 const LINKS = {
@@ -262,6 +274,7 @@ function updateHead(){
 
 function loadChat(k, manual){
   const p = PLATFORMS[k];
+  if (k === "twitch" && CUSTOM) { if (manual) TW.retry = 0; return connectTw(); }
   p.started = true;
   if (manual) p.tries = 0;
   clearTimeout(p.timer);
@@ -287,8 +300,9 @@ function showTab(k){
   });
   if (!PLATFORMS[k].started) loadChat(k, true);
   updateHead(); updateFoot();
+  if (CUSTOM && k === "twitch") $("twLog").scrollTop = $("twLog").scrollHeight;
 }
-function updateFoot(){ $("cfoot").hidden = active === "kick"; }
+function updateFoot(){ $("btnPop").hidden = active === "twitch"; }
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.p)));
 
 $("btnRefresh").addEventListener("click", () => {
@@ -306,22 +320,139 @@ function openWin(url, name, w, h){
   win.focus(); return win;
 }
 function writeKick(){ openWin(PLATFORMS.kick.pop, "kick_chat", 440, 720); }
-/* Twitch: ventana de login y recarga del chat al cerrarla */
-$("btnLogin").addEventListener("click", () => {
-  const k = active, p = PLATFORMS[k];
-  const popup = openWin(p.login, "login_"+k, 480, 700);
-  if (!popup) return;
-  $("cState").textContent = "Esperando inicio de sesión…";
-  const iv = setInterval(() => { if (popup.closed) { clearInterval(iv); loadChat(k, true); } }, 600);
+/* ---------- Chat de Twitch propio: inicio de sesión sin ventanas extra ----------
+   "Iniciar sesión con Twitch" va a Twitch en la misma pestaña y Twitch devuelve al usuario
+   a REDIRECT_URI (esta página) ya con sesión. No usa el iframe de Twitch, así que funciona
+   aunque el navegador bloquee cookies de terceros (Safari, iPhone, Brave, incógnito). */
+const TW = { ws:null, token:null, login:null, retry:0, timer:null, seen:false };
+const getS = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const setS = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} };
+if (CUSTOM) { PLATFORMS.twitch.frame.hidden = true; $("twChat").hidden = false; }
+
+async function initTw(){
+  if (!CUSTOM) return;
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("access_token")) {                      // el usuario vuelve de Twitch
+    const ok = h.get("state") && h.get("state") === getS("tw_state");
+    history.replaceState(null, "", location.pathname + location.search);
+    setS("tw_state", null);
+    if (ok) setS("tw_token", h.get("access_token"));
+  }
+  const t = getS("tw_token");
+  if (t) {
+    try {
+      const r = await fetch("https://id.twitch.tv/oauth2/validate", { headers:{ Authorization:"OAuth " + t } });
+      if (r.status === 401) setS("tw_token", null);
+      else if (r.ok) { const d = await r.json(); TW.token = t; TW.login = d.login; }
+    } catch(e){}
+  }
+  twUI();
+}
+function twUI(){
+  const on = !!TW.token;
+  $("twOut").hidden = on; $("twForm").hidden = !on;
+  $("twInput").placeholder = on ? "Enviar mensaje como " + TW.login : "";
+}
+$("twLogin").addEventListener("click", () => {
+  const st = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
+  setS("tw_state", st);
+  location.href = "https://id.twitch.tv/oauth2/authorize?" + new URLSearchParams({
+    client_id: TWITCH_CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: "token",
+    scope: "chat:read chat:edit", state: st });
 });
+$("twLogout").addEventListener("click", () => {
+  const t = TW.token;
+  setS("tw_token", null); TW.token = TW.login = null; twUI(); connectTw();
+  if (t) fetch("https://id.twitch.tv/oauth2/revoke", { method:"POST",
+    headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+    body:new URLSearchParams({ client_id:TWITCH_CLIENT_ID, token:t }) }).catch(() => {});
+});
+$("twForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const i = $("twInput"), t = i.value.trim();
+  if (!t || !TW.ws || TW.ws.readyState !== 1) return;
+  TW.ws.send("PRIVMSG #" + CHANNEL + " :" + t);
+  twMsg(TW.login, null, t, "");                     // Twitch no devuelve tus propios mensajes
+  i.value = "";
+});
+
+function connectTw(){
+  const p = PLATFORMS.twitch;
+  p.started = true; clearTimeout(TW.timer);
+  if (TW.ws) { TW.ws.onclose = null; try { TW.ws.close(); } catch(e){} }
+  p.loaded = false; setDot(p, "load"); updateHead();
+  if (!TW.seen) cover(p, "Conectando con el chat de Twitch…", false);
+  const ws = TW.ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+  ws.onopen = () => {
+    ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands");
+    ws.send("PASS " + (TW.token ? "oauth:" + TW.token : "SCHMOOPIIE"));
+    ws.send("NICK " + (TW.token ? TW.login : "justinfan" + (10000 + Math.floor(Math.random() * 80000))));
+    ws.send("JOIN #" + CHANNEL);
+  };
+  ws.onmessage = e => String(e.data).split("\r\n").forEach(l => l && twLine(l));
+  ws.onclose = () => {
+    if (ws !== TW.ws) return;
+    p.loaded = false; updateHead();
+    if (TW.retry < 3) { setDot(p, "load"); TW.timer = setTimeout(connectTw, 1500 * ++TW.retry); }
+    else { setDot(p, "err"); cover(p, "No se pudo conectar con el chat de Twitch. Revisa tu conexión e inténtalo de nuevo.", true); }
+  };
+}
+function twLine(l){
+  if (l.startsWith("PING")) { TW.ws.send("PONG :tmi.twitch.tv"); return; }
+  const tags = {};
+  if (l[0] === "@") {
+    const i = l.indexOf(" ");
+    l.slice(1, i).split(";").forEach(t => { const j = t.indexOf("="); tags[t.slice(0, j)] = t.slice(j + 1); });
+    l = l.slice(i + 1);
+  }
+  const m = l.match(/^:(\S+) (\S+) ?(.*)$/);
+  if (!m) return;
+  const cmd = m[2], rest = m[3], p = PLATFORMS.twitch;
+  if (cmd === "001") { p.loaded = true; TW.seen = true; TW.retry = 0; p.cover.hidden = true; setDot(p, "ok"); updateHead(); }
+  else if (cmd === "NOTICE" && /authentication failed/i.test(rest)) { setS("tw_token", null); TW.token = TW.login = null; twUI(); connectTw(); }
+  else if (cmd === "NOTICE") twSys(rest.replace(/^\S+ :/, ""));
+  else if (cmd === "RECONNECT") TW.ws.close();
+  else if (cmd === "PRIVMSG") twMsg(tags["display-name"] || m[1].split("!")[0], tags.color, rest.slice(rest.indexOf(" :") + 2), tags.emotes);
+}
+function twPush(el){
+  const log = $("twLog"), atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  log.append(el);
+  while (log.childElementCount > 200) log.firstElementChild.remove();
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+function twSys(text){
+  const p = document.createElement("p"); p.style.cssText = "color:var(--mute);font-style:italic"; p.textContent = text; twPush(p);
+}
+function twMsg(name, color, text, emotes){
+  const act = text.startsWith("\x01ACTION "), chars = Array.from(text), end = act ? chars.length - 1 : chars.length;
+  const ranges = [];
+  (emotes || "").split("/").forEach(e => {
+    if (!e) return;
+    const [id, pos] = e.split(":");
+    pos.split(",").forEach(r => { const [a, b] = r.split("-").map(Number); ranges.push({ a, b, id }); });
+  });
+  ranges.sort((x, y) => x.a - y.a);
+  const p = document.createElement("p"), n = document.createElement("b");
+  n.textContent = name; n.style.color = /^#[0-9a-f]{6}$/i.test(color || "") ? color : "var(--accent2)";
+  p.append(n, ": ");
+  if (act) p.style.fontStyle = "italic";
+  let i = act ? 8 : 0;
+  ranges.forEach(r => {
+    if (r.b >= end || r.a < i) return;
+    if (r.a > i) p.append(chars.slice(i, r.a).join(""));
+    const img = new Image(); img.alt = chars.slice(r.a, r.b + 1).join(""); img.loading = "lazy";
+    img.src = "https://static-cdn.jtvnw.net/emoticons/v2/" + encodeURIComponent(r.id) + "/default/dark/1.0";
+    p.append(img); i = r.b + 1;
+  });
+  if (i < end) p.append(chars.slice(i, end).join(""));
+  twPush(p);
+}
 
 /* ---------- Escribir en Kick: abre la ventana del chat de Kick ---------- */
 $("kOutText").textContent = "Para escribir en Kick inicia sesión en su ventana de chat. Aquí abajo solo se puede leer.";
 $("btnWrite2").addEventListener("click", writeKick);
 
-function writeTwitch(){ openWin(PLATFORMS.twitch.pop, "chat_twitch", 420, 700); }
-$("btnTwPop").addEventListener("click", writeTwitch);
-$("btnPop").addEventListener("click", () => { if (active === "kick") writeKick(); else writeTwitch(); });
+$("btnPop").addEventListener("click", () => { if (active === "kick") writeKick(); });
 
 /* Mostrar / ocultar chat */
 function setChat(show){
@@ -352,7 +483,8 @@ document.addEventListener("visibilitychange", () => {
 let startHidden = false;
 try { startHidden = localStorage.getItem("chat") === "0"; } catch(e){}
 if (startHidden) $("main").classList.add("nochat");
-else { loadChat("twitch", true); loadChat("kick", true); }
+else loadChat("kick", true);
+initTw().then(() => { if (!startHidden) loadChat("twitch", true); });
 updateFoot(); syncToggle();
 </script>
 </body>
