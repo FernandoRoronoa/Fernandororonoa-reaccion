@@ -131,6 +131,10 @@ nav{margin-left:0;width:100%}
       <img class="avatar" id="avatar" alt="Foto de perfil de HoyTeReacciono" src="https://static-cdn.jtvnw.net/jtv_user_pictures/9cbb64ee-d1f1-456a-8075-99cd4abe4db1-profile_image-300x300.png" onerror="this.onerror=null;this.removeAttribute('src')">
       <div class="pinfo"><h1>HoyTeReacciono <a class="subbtn" id="lnkSub" href="https://www.twitch.tv/hoytereacciono" target="_blank" rel="noopener">Suscribirse</a></h1><p id="followers"></p></div>
       <div class="bar">
+        <div class="seg" role="group" aria-label="Fuente del directo">
+          <button type="button" id="srcVdo" aria-pressed="true">Baja latencia</button>
+          <button type="button" id="srcTw" aria-pressed="false">Twitch</button>
+        </div>
         <button class="btn showchat" id="showChat" type="button">Mostrar chat</button>
       </div>
     </div>
@@ -356,8 +360,20 @@ $("lnkPatreon").href = LINKS.patreon;
 $("lnkDiscord").href = LINKS.discord;
 
 /* ---------- Reproductor (ok.ru) ---------- */
-$("okplayer").src = STREAM_URL;
-(function(){ const t = $("liveTag"); t.textContent = "Baja latencia"; t.classList.remove("on"); })();
+const TWITCH_PLAYER = "https://player.twitch.tv/?channel=" + CHANNEL + "&parent=" + encodeURIComponent(PARENT) + "&autoplay=true&muted=false";
+function setSource(src){
+  const tw = src === "twitch";
+  $("okplayer").src = tw ? TWITCH_PLAYER : STREAM_URL;
+  $("srcVdo").setAttribute("aria-pressed", !tw);
+  $("srcTw").setAttribute("aria-pressed", tw);
+  const t = $("liveTag"); t.textContent = tw ? "Twitch" : "Baja latencia"; t.classList.remove("on");
+  try { localStorage.setItem("source", src); } catch(e){}
+}
+$("srcVdo").addEventListener("click", () => setSource("vdo"));
+$("srcTw").addEventListener("click", () => setSource("twitch"));
+let startSrc = "vdo";
+try { startSrc = localStorage.getItem("source") === "twitch" ? "twitch" : "vdo"; } catch(e){}
+setSource(startSrc);
 
 /* ---------- Chat (Twitch + Kick) ---------- */
 const PLATFORMS = {
